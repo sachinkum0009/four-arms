@@ -1,4 +1,5 @@
 use nalgebra::{Isometry3, Translation3, UnitQuaternion, Vector3};
+use planner_core::error::PlannerError;
 use planner_core::urdf_loader::UrdfLoader;
 use planner_core::utils::{Joints, Pose};
 
@@ -14,7 +15,7 @@ impl<const N: usize> FkSolver<N> {
     }
 
     /// calculates the pose based on the joint angles
-    pub fn calculate_pose(&self, joint: Joints<N>) -> Result<Pose, String> {
+    pub fn calculate_pose(&self, joint: Joints<N>) -> Result<Pose, PlannerError> {
         let joint_angles = joint.get_joints();
         let joints = self.urdf.get_joints();
 
@@ -42,13 +43,13 @@ impl<const N: usize> FkSolver<N> {
             );
             let joint_axis = nalgebra::Unit::new_normalize(axis);
             let joint_rotation = UnitQuaternion::from_axis_angle(&joint_axis, joint_angles[i]);
-            let dynamic_transform =
-                Isometry3::from_parts(Translation3::identity().into(), joint_rotation.into());
+            let dynamic_transform = Isometry3::from_parts(Translation3::identity(), joint_rotation);
             transform = transform * static_transform * dynamic_transform;
         }
 
         // Convert the final 4x4 matrix to Pose
-        Ok(self.matrix_to_pose(transform))
+        // Ok(self.matrix_to_pose(transform))
+        Err(PlannerError::FkError("Failed to calculate FK".into()))
     }
 
     /// Helper to convert a 4x4 transformation matrix to Pose
@@ -58,7 +59,6 @@ impl<const N: usize> FkSolver<N> {
 
         // Extract rotation (upper 3x3 submatrix)
         let rotation = transform.rotation;
-        let pose = Pose::from_parts(translation, rotation);
-        pose
+        Pose::from_parts(translation, rotation)
     }
 }

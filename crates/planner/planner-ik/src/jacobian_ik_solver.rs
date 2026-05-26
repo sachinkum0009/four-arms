@@ -1,4 +1,4 @@
-use crate::ik_solver::IkSolve;
+use crate::{IkSolverMethod, ik_solver::IkSolve};
 
 use planner_core::utils::{Joints, Pose};
 
@@ -34,10 +34,16 @@ impl<const N: usize> IkSolve<N> for JacobianIkSolver {
         &self,
         current_joints: &Joints<N>,
         target_pose: &Pose,
+        method: IkSolverMethod,
     ) -> Result<Vec<Joints<N>>, String> {
+        match method {
+            IkSolverMethod::AnalyticalMethod => println!("using analytical method to solve ik"),
+            IkSolverMethod::NumericalMethod => println!("using numerical method to solve ik"),
+        }
         let joints = Joints::<N>::zeros();
         let mut trajectory = Vec::new();
         trajectory.push(joints);
+        trajectory.push(current_joints.clone());
         Ok(trajectory)
     }
 }

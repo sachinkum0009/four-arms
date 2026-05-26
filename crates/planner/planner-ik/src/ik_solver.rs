@@ -1,7 +1,6 @@
-use std::thread::current;
-
+use crate::IkSolverMethod;
 use planner_core::utils::{Joints, Pose};
-use uom::si::angle::radian;
+
 pub struct IkSolver<const N: usize> {
     max_iterations: usize,
     position_tolerance: f64,
@@ -35,7 +34,8 @@ impl<const N: usize> IkSolver<N> {
         target_pose: Pose,
         num_steps: usize,
     ) -> Result<Vec<[f64; N]>, String> {
-        let desired_joints = Joints::new([1.5, 3.3, 2.3, 3.6, 0.3, 5.0]);
+        let desired_joints = self.calculate_joint_angles(target_pose)?;
+        //Joints::new([1.5, 3.3, 2.3, 3.6, 0.3, 5.0]);
         let mut trajectory = Vec::with_capacity(num_steps);
 
         let current_joint_angles = current_joints.get_joints();
@@ -70,5 +70,6 @@ pub trait IkSolve<const N: usize> {
         &self,
         current_joints: &Joints<N>,
         target_pose: &Pose,
+        method: IkSolverMethod,
     ) -> Result<Vec<Joints<N>>, String>;
 }
