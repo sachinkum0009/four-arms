@@ -7,7 +7,7 @@ use planner_ik::jacobian_ik_solver::JacobianIkSolver;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let urdf_path = "/Users/mac/zzzzz/rust/robotics/robotics/urdf/my_robot2.urdf".to_string();
+    let urdf_path = "/Users/mac/zzzzz/rust/robotics/robotics/urdf/my_robot3.urdf".to_string();
 
     // let ik_solver = IkSolver::<6>::default();
     // let target_pose = Pose::default();
@@ -18,13 +18,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     //     println!("joints: {:?}", joints);
     // }
 
-    let fk_solver = FkSolver::<6>::from_urdf(urdf_path)?;
+    let fk_solver = FkSolver::from_urdf(urdf_path)?;
 
     let joints = Joints::new([0.3, 0.3, 0.4, 0.5, 0.5, 0.1]);
-    let pose = fk_solver.calculate_pose(joints)?;
+    let pose = fk_solver.calculate_pose(&joints.get_joints())?;
     println!("pose: {:?}", pose);
     let joints2 = Joints::new([0.6, 1.5, 0.1, 0.5, 3.0, 0.1]);
-    let pose2 = fk_solver.calculate_pose(joints2);
+    let pose2 = fk_solver.calculate_pose(&joints2.get_joints());
     match pose2 {
         Ok(pose) => println!("pose: {:?}", pose),
         Err(err) => match err {

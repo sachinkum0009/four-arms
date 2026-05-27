@@ -3,20 +3,23 @@ use planner_core::error::PlannerError;
 use planner_core::urdf_loader::UrdfLoader;
 use planner_core::utils::{Joints, Pose};
 
-pub struct FkSolver<const N: usize> {
+pub struct FkSolver {
     urdf: UrdfLoader,
 }
 
-impl<const N: usize> FkSolver<N> {
+impl FkSolver {
     pub fn from_urdf(urdf_file_path: String) -> Result<Self, String> {
         let urdf_loader = UrdfLoader::from_urdf(&urdf_file_path)
             .map_err(|e| format!("Failed to load URDF: {:?}", e))?;
         Ok(Self { urdf: urdf_loader })
     }
+    pub fn get_num_joints(&self) -> usize {
+        self.urdf.get_joints().iter().size_hint().0
+    }
 
     /// calculates the pose based on the joint angles
-    pub fn calculate_pose(&self, joint: Joints<N>) -> Result<Pose, PlannerError> {
-        let joint_angles = joint.get_joints();
+    pub fn calculate_pose(&self, joint: &[f64]) -> Result<Pose, PlannerError> {
+        let joint_angles = joint;
         let joints = self.urdf.get_joints();
 
         let mut transform = Isometry3::<f64>::identity();
@@ -48,8 +51,7 @@ impl<const N: usize> FkSolver<N> {
         }
 
         // Convert the final 4x4 matrix to Pose
-        // Ok(self.matrix_to_pose(transform))
-        Err(PlannerError::FkError("Failed to calculate FK".into()))
+        Ok(self.matrix_to_pose(transform))
     }
 
     /// Helper to convert a 4x4 transformation matrix to Pose
