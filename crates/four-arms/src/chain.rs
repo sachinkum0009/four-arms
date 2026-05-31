@@ -255,7 +255,7 @@ impl Chain {
             .collect()
     }
 
-    fn compute_jacobian(&self, joint_angles: &Vec<f64>) -> Result<DMatrix<f64>, FourArmError> {
+    fn compute_jacobian(&self, joint_angles: &[f64]) -> Result<DMatrix<f64>, FourArmError> {
         let joint_size = joint_angles.len();
 
         // Get end-effector position once — used as the lever arm target for all columns
