@@ -391,3 +391,159 @@ impl Chain {
         Pose::from_parts(translation, rotation)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::robot::{Joint, Limit, Link, Pose};
+
+    // Helper function to build a mock 2-DOF chain for mathematical verification
+    fn create_mock_chain() -> Chain {
+        let mut chain = Chain::new("test_robot".to_string());
+
+        // Create 2 links
+        chain.links.push(Link {
+            name: "link1".to_string(),
+            inertial: None,
+            visuals: vec![],
+            collisions: vec![],
+        });
+        chain.links.push(Link {
+            name: "link2".to_string(),
+            inertial: None,
+            visuals: vec![],
+            collisions: vec![],
+        });
+
+        // Joint 1 sits at world origin
+        chain.joints.push(Joint {
+            name: "joint1".to_string(),
+            joint_type: "revolute".to_string(),
+            parent_link: "base_link".to_string(),
+            child_link: "link1".to_string(),
+            origin: Pose {
+                position: [0.0, 0.0, 0.0],
+                rotation: [0.0, 0.0, 0.0, 1.0], // Identity quaternion [x, y, z, w]
+            },
+            axis: Some([0.0, 0.0, 1.0]), // Z-axis rotation
+            limit: Some(Limit {
+                lower: Some(-std::f64::consts::PI),
+                upper: Some(std::f64::consts::PI),
+                effort: Some(10.0),
+                velocity: Some(1.0),
+            }),
+        });
+
+        // Joint 2 is offset by 1.0 meter along the X axis
+        chain.joints.push(Joint {
+            name: "joint2".to_string(),
+            joint_type: "revolute".to_string(),
+            parent_link: "link1".to_string(),
+            child_link: "link2".to_string(),
+            origin: Pose {
+                position: [1.0, 0.0, 0.0], // 1 meter offset
+                rotation: [0.0, 0.0, 0.0, 1.0],
+            },
+            axis: Some([0.0, 0.0, 1.0]), // Z-axis rotation
+            limit: Some(Limit {
+                lower: Some(-std::f64::consts::PI),
+                upper: Some(std::f64::consts::PI),
+                effort: Some(10.0),
+                velocity: Some(1.0),
+            }),
+        });
+
+        chain
+    }
+
+    #[test]
+    fn test_joint_mismatch() {
+        let chain = create_mock_chain();
+
+        // The mock chain expects 2 joint inputs, we pass 3
+        let wrong_joints = vec![0.0, 0.1, 0.2];
+        let result = chain.forward_kinematics(&wrong_joints);
+
+        assert!(result.is_err());
+        match result.unwrap_err() {
+            FourArmError::JointMismatch(msg, received) => {
+                assert_eq!(received, 3);
+                assert!(msg.contains("Expected 2 joints"));
+            }
+            _ => panic!("Expected a JointMismatch variant error!"),
+        }
+    }
+
+    #[test]
+    fn test_forward_kinematics_straight() {
+        let chain = create_mock_chain();
+
+        // Joints at 0.0 radians should extend the arm straight along the X-axis
+        let joint_angles = vec![0.0, 0.0];
+        let pose = chain.forward_kinematics(&joint_angles).unwrap();
+
+        // Position should be at X = 1.0 (from joint2's relative origin)
+        assert!((pose.position[0] - 1.0).abs() < 1e-6);
+        assert!(pose.position[1].abs() < 1e-6);
+        assert!(pose.position[2].abs() < 1e-6);
+    }
+
+    #[test]
+    fn test_forward_kinematics_rotation() {
+        let chain = create_mock_chain();
+
+        // Rotate first joint 90 degrees (PI / 2)
+        let joint_angles = vec![std::f64::consts::FRAC_PI_2, 0.0];
+        let pose = chain.forward_kinematics(&joint_angles).unwrap();
+
+        // The 1.0m link should now point straight up along the Y axis
+        assert!(
+            pose.position[0].abs() < 1e-6,
+            "Expected X near 0, got {}",
+            pose.position[0]
+        );
+        assert!(
+            (pose.position[1] - 1.0).abs() < 1e-6,
+            "Expected Y near 1, got {}",
+            pose.position[1]
+        );
+    }
+
+    #[test]
+    fn test_inverse_kinematics_convergence() {
+        let chain = create_mock_chain();
+
+        // 1. Pick a realistic target pose reachable by this arm (e.g., X=0, Y=1)
+        let target_pose = Pose {
+            position: [0.0, 1.0, 0.0],
+            // Facing 90 degrees rotated around Z axis
+            rotation: [0.0, 0.0, 0.7071067811865475, 0.7071067811865476],
+        };
+
+        // 2. Supply a seed/initial guess near the solution to avoid local minima
+        let initial_guess = vec![0.5, 0.0];
+
+        // 3. Run IK solver
+        let result = chain.inverse_kinematics(&target_pose, &initial_guess, 50, 1e-3, 0.1);
+
+        assert!(
+            result.is_ok(),
+            "IK solver failed to converge: {:?}",
+            result.err()
+        );
+        let solved_joints = result.unwrap();
+
+        // 4. Run FK on the result to confirm it reaches the target destination
+        let final_pose = chain.forward_kinematics(&solved_joints).unwrap();
+
+        let distance_error = ((final_pose.position[0] - target_pose.position[0]).powi(2)
+            + (final_pose.position[1] - target_pose.position[1]).powi(2))
+        .sqrt();
+
+        assert!(
+            distance_error < 1e-2,
+            "Target position missed! Final position was: {:?}",
+            final_pose.position
+        );
+    }
+}
