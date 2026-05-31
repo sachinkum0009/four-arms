@@ -1,5 +1,7 @@
 use four_arms::chain::Chain;
 use four_arms::errors::FourArmError;
+use four_arms::planner::{RRT, RRTStar};
+use four_arms::robot::Pose;
 use std::env;
 
 #[tokio::main]
@@ -17,6 +19,11 @@ async fn main() -> Result<(), FourArmError> {
     println!("pose: {:?}", pose);
 
     let res_joints = chain.inverse_kinematics(&pose, &joints1, 50, 0.1, 0.2)?;
+    let target_pose = Pose::default();
     println!("res joint angles: {:?}", res_joints);
+
+    let rrt = RRT::default();
+    let traj = rrt.plan(&pose, &target_pose)?;
+    println!("trajectory of joints: {:?}", traj);
     Ok(())
 }

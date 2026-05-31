@@ -10,4 +10,6 @@ pub enum FourArmError {
     ParseError(String),
     #[error("Joint size doesn't match: {0} (Received: {1})")]
     JointMismatch(String, usize),
+    #[error("Failed to plan the trajectory: {0}")]
+    TrajPlanError(String),
 }
