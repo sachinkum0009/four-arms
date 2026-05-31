@@ -1,3 +1,3 @@
 [workspace]
-members = ["crates/planner/*"]
-resolver = "3"
+members = ["crates/four-arms"]
+resolver = "2"
