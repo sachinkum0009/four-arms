@@ -3,8 +3,7 @@ use crate::robot::{
     parse_geometry, parse_origin,
 };
 use nalgebra::{
-    DMatrix, Isometry3, Matrix4, Quaternion, Translation, Translation3, UnitQuaternion, Vector3,
-    Vector6,
+    DMatrix, Isometry3, Quaternion, Translation, Translation3, UnitQuaternion, Vector3, Vector6,
 };
 use quick_xml::de::from_str;
 use std::fs;
