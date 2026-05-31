@@ -1,0 +1,87 @@
+name: CI & Docs Deployment
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+# Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Allow only one concurrent deployment, skipping runs queued between the run in-progress and latest queued.
+# However, do NOT cancel in-progress runs as we want to allow these production deployments to complete.
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build-and-test:
+    name: Build & Test Crate
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: Build Crate
+        run: cargo build --verbose
+
+      - name: Run Tests
+        run: cargo test --verbose
+
+  deploy-docs:
+    name: Build & Deploy Docs
+    needs: build-and-test
+    # Only run this job if we are pushing to the main branch
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: Generate Documentation
+        env:
+          RUSTDOCFLAGS: -D warnings
+        run: |
+          # Cargo doc puts files in target/doc/
+          # We use --no-deps so we only generate documentation for your code, not dependencies
+          cargo doc --no-deps --workspace
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Prepare Documentation Folder
+        run: |
+          # GitHub Pages serves out of the root of the artifact, but cargo doc nests under target/doc/crate_name.
+          # We inject a small index.html to automatically redirect root visits directly to your crate documentation.
+          # Replace 'four_arms' below with your actual crate name if it differs in snake_case format.
+          echo '<meta http-equiv="refresh" content="0;url=four_arms/index.html">' > target/doc/index.html
+
+      - name: Upload Artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: "target/doc"
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

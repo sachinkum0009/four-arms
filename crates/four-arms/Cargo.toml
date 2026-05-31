@@ -1,0 +1,15 @@
+[package]
+name = "four-arms"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+nalgebra = "0.35.0"
+tokio = { version = "1.52.3", features = ["full"] }
+serde = { version = "1.0.228", features = ["derive"] }
+quick-xml = { version = "0.40.1", features = ["serde", "serialize"] }
+thiserror = { version = "2.0.18" }
+
+[[bin]]
+name = "ik_planner"
+path = "bin/ik_planner.rs"
