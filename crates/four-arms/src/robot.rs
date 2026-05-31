@@ -308,12 +308,12 @@ pub fn parse_origin(origin: Option<UrdfOrigin>) -> Pose {
 
         // Convert RPY to quaternion (simplified placeholder)
         let position = [
-            xyz.get(0).copied().unwrap_or(0.0),
+            xyz.first().copied().unwrap_or(0.0),
             xyz.get(1).copied().unwrap_or(0.0),
             xyz.get(2).copied().unwrap_or(0.0),
         ];
         let rotation = [
-            rpy.get(0).copied().unwrap_or(0.0),
+            rpy.first().copied().unwrap_or(0.0),
             rpy.get(1).copied().unwrap_or(0.0),
             rpy.get(2).copied().unwrap_or(0.0),
             1.0, // Placeholder for quaternion w
@@ -337,7 +337,7 @@ pub fn parse_geometry(geometry: Option<UrdfGeometry>) -> Geometry {
                 .collect();
             Geometry::Box {
                 size: [
-                    size.get(0).copied().unwrap_or(0.0),
+                    size.first().copied().unwrap_or(0.0),
                     size.get(1).copied().unwrap_or(0.0),
                     size.get(2).copied().unwrap_or(0.0),
                 ],
@@ -358,7 +358,7 @@ pub fn parse_geometry(geometry: Option<UrdfGeometry>) -> Geometry {
                     .map(|s| s.parse().unwrap_or(1.0))
                     .collect();
                 [
-                    scale_vec.get(0).copied().unwrap_or(1.0),
+                    scale_vec.first().copied().unwrap_or(1.0),
                     scale_vec.get(1).copied().unwrap_or(1.0),
                     scale_vec.get(2).copied().unwrap_or(1.0),
                 ]

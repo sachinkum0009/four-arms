@@ -168,7 +168,7 @@ impl Chain {
                 urdf_joint.origin.rotation[2],
             );
             let rotation = UnitQuaternion::from_quaternion(q);
-            let static_transform = Isometry3::from_parts(translation.into(), rotation.into());
+            let static_transform = Isometry3::from_parts(translation, rotation);
 
             let urdf_axis = urdf_joint.axis.unwrap();
             let axis = Vector3::new(urdf_axis[0], urdf_axis[1], urdf_axis[2]);
@@ -216,7 +216,7 @@ impl Chain {
             let x = decomp
                 .solve(&error)
                 .ok_or_else(|| "LU decomposition failed — matrix may be singular".to_string())
-                .map_err(|e| FourArmError::IkError(e))?;
+                .map_err(FourArmError::IkError)?;
 
             // Joint update: delta_q = J^T * x
             let delta_q = &jt * x;
@@ -288,10 +288,10 @@ impl Chain {
                 urdf_joint.origin.rotation[2],
             );
             let rotation = UnitQuaternion::new_normalize(q);
-            let static_transform = Isometry3::from_parts(translation.into(), rotation);
+            let static_transform = Isometry3::from_parts(translation, rotation);
 
             // Apply the static part to reach joint i's origin in world frame
-            transform = transform * static_transform;
+            transform *= static_transform;
 
             // --- Sample joint i frame AFTER static transform, BEFORE joint rotation ---
             // p_i: origin of joint i in world frame
@@ -302,7 +302,7 @@ impl Chain {
             let local_axis = urdf_joint
                 .axis
                 .map(|a| Vector3::new(a[0], a[1], a[2]))
-                .unwrap_or_else(|| Vector3::z());
+                .unwrap_or_else(Vector3::z);
 
             // Rotate the local axis into world frame using the accumulated rotation
             let z_i = transform.rotation * local_axis;
@@ -324,7 +324,7 @@ impl Chain {
             let joint_axis = nalgebra::Unit::new_normalize(local_axis);
             let joint_rotation = UnitQuaternion::from_axis_angle(&joint_axis, joint_angles[i]);
             let dynamic_transform = Isometry3::from_parts(Translation3::identity(), joint_rotation);
-            transform = transform * dynamic_transform;
+            transform *= dynamic_transform;
         }
 
         Ok(jacobian)
