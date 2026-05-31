@@ -1,7 +1,8 @@
 use four_arms::chain::Chain;
+use four_arms::errors::FourArmError;
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
+async fn main() -> Result<(), FourArmError> {
     let file_path = "/Users/mac/zzzzz/rust/robotics/robotics/urdf/my_robot2.urdf";
     let chain = Chain::from_urdf(file_path)?;
 
