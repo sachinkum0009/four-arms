@@ -1,3 +1,4 @@
+use crate::errors::FourArmError;
 use crate::robot::{
     Collision, Inertia, Inertial, Joint, Limit, Link, Material, Pose, UrdfRobot, Visual,
     parse_geometry, parse_origin,
@@ -33,9 +34,11 @@ impl Chain {
         &self.joints
     }
 
-    pub fn from_urdf(file_path: &str) -> Result<Self, Box<dyn std::error::Error>> {
-        let urdf_content = fs::read_to_string(file_path)?;
-        let robot: UrdfRobot = from_str(&urdf_content)?;
+    pub fn from_urdf(file_path: &str) -> Result<Self, FourArmError> {
+        let urdf_content =
+            fs::read_to_string(file_path).map_err(|e| FourArmError::ParseError(e.to_string()))?;
+        let robot: UrdfRobot =
+            from_str(&urdf_content).map_err(|e| FourArmError::ParseError(e.to_string()))?;
 
         let mut chain = Chain::new(robot.name.unwrap_or_default());
 
@@ -139,9 +142,15 @@ impl Chain {
     ///
     /// It uses linear transpose to calculate the final pose
     /// of end effector
-    pub fn forward_kinematics(&self, joints: &[f64]) -> Result<Pose, String> {
+    pub fn forward_kinematics(&self, joints: &[f64]) -> Result<Pose, FourArmError> {
         if joints.len() != self.get_joints().len() {
-            return Err("Joints size doesn't match".to_string());
+            return Err(FourArmError::JointMismatch(
+                format!(
+                    "Expected {} joints from URDF",
+                    self.get_joint_limits().len()
+                ),
+                joints.len(),
+            ));
         }
 
         let mut transform = Isometry3::<f64>::identity();
@@ -184,7 +193,7 @@ impl Chain {
         max_iterations: usize,
         tolerance: f64,
         damping: f64,
-    ) -> Result<Vec<f64>, String> {
+    ) -> Result<Vec<f64>, FourArmError> {
         let mut joint_angles = joints.to_vec();
         for _ in 0..max_iterations {
             let current_pose = self.forward_kinematics(&joint_angles)?;
@@ -206,7 +215,8 @@ impl Chain {
             let decomp = damped.lu();
             let x = decomp
                 .solve(&error)
-                .ok_or_else(|| "LU decomposition failed — matrix may be singular".to_string())?;
+                .ok_or_else(|| "LU decomposition failed — matrix may be singular".to_string())
+                .map_err(|e| FourArmError::IkError(e))?;
 
             // Joint update: delta_q = J^T * x
             let delta_q = &jt * x;
@@ -224,10 +234,10 @@ impl Chain {
             }
         }
 
-        Err(format!(
+        Err(FourArmError::IkError(format!(
             "Inverse kinematics did not converge within {} iterations",
             max_iterations
-        ))
+        )))
     }
 
     /// Returns the Vector containing limits
@@ -245,7 +255,7 @@ impl Chain {
             .collect()
     }
 
-    fn compute_jacobian(&self, joint_angles: &Vec<f64>) -> Result<DMatrix<f64>, String> {
+    fn compute_jacobian(&self, joint_angles: &Vec<f64>) -> Result<DMatrix<f64>, FourArmError> {
         let joint_size = joint_angles.len();
 
         // Get end-effector position once — used as the lever arm target for all columns
