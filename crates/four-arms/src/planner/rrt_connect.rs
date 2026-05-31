@@ -1,5 +1,6 @@
 use crate::{
     errors::FourArmError,
+    planner::Planner,
     robot::{Joint, Pose},
 };
 
@@ -12,9 +13,9 @@ pub struct RRTConnect {
     max_iter: usize,
 }
 
-impl RRTConnect {
+impl Planner for RRTConnect {
     /// initialized the RRT
-    pub fn new(step_size: f64, max_iter: usize) -> Self {
+    fn new(step_size: f64, max_iter: usize) -> Self {
         Self {
             step_size,
             max_iter,
@@ -23,7 +24,7 @@ impl RRTConnect {
 
     /// Plans the trajectory from start pose
     /// to goal pose
-    pub fn plan(&self, start_pos: &Pose, goal_pos: &Pose) -> Result<Vec<Joint>, FourArmError> {
+    fn plan(&self, start_pos: &Pose, goal_pos: &Pose) -> Result<Vec<Joint>, FourArmError> {
         Err(FourArmError::TrajPlanError(
             "Failed to plan the trajectory".to_string(),
         ))

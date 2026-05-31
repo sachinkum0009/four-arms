@@ -1,6 +1,6 @@
 use four_arms::chain::Chain;
 use four_arms::errors::FourArmError;
-use four_arms::planner::{RRT, RRTStar};
+use four_arms::planner::{CHOMP, PRM, RRT, RRTStar};
 use four_arms::robot::Pose;
 use std::env;
 
