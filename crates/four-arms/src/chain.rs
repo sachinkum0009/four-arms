@@ -34,9 +34,23 @@ impl Chain {
         &self.joints
     }
 
+    pub fn get_joint_limits(&self) -> Vec<(f64, f64)> {
+        let mut joint_limits = Vec::new();
+        let joints = self.get_joints();
+        for joint in joints {
+            let lower = joint.limit.as_ref().unwrap().lower.unwrap();
+            let upper = joint.limit.as_ref().unwrap().upper.unwrap();
+            joint_limits.push((lower, upper));
+        }
+        joint_limits
+    }
+
     pub fn from_urdf(file_path: &str) -> Result<Self, FourArmError> {
+        println!("path is {}", file_path);
         let urdf_content =
             fs::read_to_string(file_path).map_err(|e| FourArmError::ParseError(e.to_string()))?;
+
+        println!("works here");
         let robot: UrdfRobot =
             from_str(&urdf_content).map_err(|e| FourArmError::ParseError(e.to_string()))?;
 
@@ -228,9 +242,7 @@ impl Chain {
             // Clamp joints to their limits if defined
             let limits = self.get_joint_limits();
             for (i, limit) in limits.iter().enumerate() {
-                if let (Some(lower), Some(upper)) = (limit.lower, limit.upper) {
-                    joint_angles[i] = joint_angles[i].clamp(lower, upper);
-                }
+                joint_angles[i] = joint_angles[i].clamp(limit.0, limit.1);
             }
         }
 
@@ -240,20 +252,21 @@ impl Chain {
         )))
     }
 
+    /// TODO: Remove old function
     /// Returns the Vector containing limits
-    fn get_joint_limits(&self) -> Vec<Limit> {
-        self.joints
-            .iter()
-            .filter_map(|joint| {
-                joint.limit.as_ref().map(|limit| Limit {
-                    lower: limit.lower,
-                    upper: limit.upper,
-                    effort: limit.effort,
-                    velocity: limit.velocity,
-                })
-            })
-            .collect()
-    }
+    // fn get_joint_limits(&self) -> Vec<Limit> {
+    //     self.joints
+    //         .iter()
+    //         .filter_map(|joint| {
+    //             joint.limit.as_ref().map(|limit| Limit {
+    //                 lower: limit.lower,
+    //                 upper: limit.upper,
+    //                 effort: limit.effort,
+    //                 velocity: limit.velocity,
+    //             })
+    //         })
+    //         .collect()
+    // }
 
     fn compute_jacobian(&self, joint_angles: &[f64]) -> Result<DMatrix<f64>, FourArmError> {
         let joint_size = joint_angles.len();
