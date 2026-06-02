@@ -1,60 +1,14 @@
 use crate::{
     errors::FourArmError,
-    planner::Planner,
+    planner::{ConfigExt, JointState, Planner, Trajectory},
     robot::{Joint, Pose},
 };
 
 use rand::RngExt;
 
-/// Extension trait providing geometry helpers for joint-space configs.
-trait ConfigExt {
-    /// Euclidean distance between two configs.
-    fn distance(&self, other: &[f64]) -> f64;
-
-    /// Steps from `self` toward `target` by at most `step_size`.
-    /// Returns `None` when `self` already equals `target`.
-    fn step_towards(&self, target: &[f64], step_size: f64) -> Option<Vec<f64>>;
-
-    /// Collision check stub — always returns `false` (no collision)
-    /// until a real collision checker is wired in.
-    fn is_in_collision(&self) -> bool;
-}
-
-impl ConfigExt for [f64] {
-    fn distance(&self, other: &[f64]) -> f64 {
-        self.iter()
-            .zip(other.iter())
-            .map(|(a, b)| (a - b).powi(2))
-            .sum::<f64>()
-            .sqrt()
-    }
-
-    fn step_towards(&self, target: &[f64], step_size: f64) -> Option<Vec<f64>> {
-        let dist = self.distance(target);
-        if dist == 0.0 {
-            return None;
-        }
-        if dist <= step_size {
-            return Some(target.to_vec());
-        }
-        let scale = step_size / dist;
-        Some(
-            self.iter()
-                .zip(target.iter())
-                .map(|(a, b)| a + (b - a) * scale)
-                .collect(),
-        )
-    }
-
-    fn is_in_collision(&self) -> bool {
-        // TODO: integrate with the robot's collision model
-        false
-    }
-}
-
 /// RRT Node
 struct RRTNode {
-    config: Vec<f64>,
+    config: JointState,
     parent_idx: Option<usize>,
 }
 
@@ -62,6 +16,14 @@ struct RRTNode {
 ///
 /// Planning algorithm to plan trajectory to reach
 /// target goal.
+/// Steps
+/// 1. Initialize Tree
+/// 2. Random Sampling
+/// 3. Find Nearest Node
+/// 4. Steer towards Sample
+/// 5. Check for goal reached
+/// 6. Repeat Until sucess
+/// 7. Extract the Path
 pub struct RRT {
     step_size: f64,
     max_iter: usize,
@@ -92,7 +54,7 @@ impl RRT {
         &self,
         start_joints: &[f64],
         goal_joints: &[f64],
-    ) -> Result<Vec<Vec<f64>>, FourArmError> {
+    ) -> Result<Trajectory, FourArmError> {
         if start_joints.len() != goal_joints.len() {
             return Err(FourArmError::JointMismatch(
                 "joint of size doesn't match".to_string(),
@@ -193,7 +155,14 @@ impl Default for RRT {
         Self {
             step_size: 0.1,
             max_iter: 50,
-            ..Default::default()
+            joint_limits: vec![
+                (-1.571, 1.571),
+                (-1.571, 1.571),
+                (-1.571, 1.571),
+                (-1.571, 1.571),
+                (-1.571, 1.571),
+                (-1.571, 1.571),
+            ],
         }
     }
 }

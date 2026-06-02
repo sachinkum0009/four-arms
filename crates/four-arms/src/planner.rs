@@ -26,3 +26,53 @@ pub trait Planner: Default {
     fn new(step_size: f64, max_iter: usize) -> Self;
     fn plan(&self, start_pos: &Pose, goal_pos: &Pose) -> Result<Vec<Joint>, FourArmError>;
 }
+
+/// Extension trait providing geometry helpers for joint-space configs.
+trait ConfigExt {
+    /// Euclidean distance between two configs.
+    fn distance(&self, other: &[f64]) -> f64;
+
+    /// Steps from `self` toward `target` by at most `step_size`.
+    /// Returns `None` when `self` already equals `target`.
+    fn step_towards(&self, target: &[f64], step_size: f64) -> Option<Vec<f64>>;
+
+    /// Collision check stub — always returns `false` (no collision)
+    /// until a real collision checker is wired in.
+    fn is_in_collision(&self) -> bool;
+}
+
+impl ConfigExt for [f64] {
+    fn distance(&self, other: &[f64]) -> f64 {
+        self.iter()
+            .zip(other.iter())
+            .map(|(a, b)| (a - b).powi(2))
+            .sum::<f64>()
+            .sqrt()
+    }
+
+    fn step_towards(&self, target: &[f64], step_size: f64) -> Option<Vec<f64>> {
+        let dist = self.distance(target);
+        if dist == 0.0 {
+            return None;
+        }
+        if dist <= step_size {
+            return Some(target.to_vec());
+        }
+        let scale = step_size / dist;
+        Some(
+            self.iter()
+                .zip(target.iter())
+                .map(|(a, b)| a + (b - a) * scale)
+                .collect(),
+        )
+    }
+
+    fn is_in_collision(&self) -> bool {
+        // TODO: integrate with the robot's collision model
+        false
+    }
+}
+
+// types
+type JointState = Vec<f64>;
+type Trajectory = Vec<JointState>;

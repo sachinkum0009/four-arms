@@ -13,19 +13,55 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let rec = RecordingStreamBuilder::new("ik_planner_example")
         .recording_id("run-1")
         .connect_grpc()?;
+
+    // for t in 0..10 {
+    //     rec.set_time_sequence("step", t);
+    //     let tf = t as f64;
+    //     rec.log()
+    // }
+
     rec.log_file_from_path(urdf_path, None, true)?;
     let urdf = UrdfTree::from_file_path(urdf_path, None)?;
 
     // Log ee_path and ee_marker directly under base_link in the TF tree
     // so Rerun can resolve the transform chain without any TF lookup needed
-    let ee_path_entity = "/six_dof_arm/visual_geometries/base_link/ee_path";
-    let ee_marker_entity = "/six_dof_arm/visual_geometries/base_link/ee_marker";
+    // let ee_path_entity = "/six_dof_arm/base_link/ee_path";
+    // let ee_marker_entity = "/six_dof_arm/base_link/ee_marker";
+
+    let ee_path_entity = "/six_dof_arm/base_link/ee_path";
+    let ee_marker_entity = "/six_dof_arm/base_link/ee_marker";
 
     let joint_limits = chain.get_joint_limits();
     let start_joints = [1.5, 0.2, 0.3, 0.3, 0.0, 0.0];
     let goal_joints = [-1.5, 1.3, 1.4, 1.3, 1.0, 1.5];
     let rrt = RRT::new(0.2, 500, joint_limits);
     let traj = rrt.plan_traj(&start_joints, &goal_joints)?;
+
+    let mut pose_path = Vec::new();
+    for joints in traj.clone() {
+        let pose = chain.forward_kinematics(&joints)?.position;
+        pose_path.push(pose);
+    }
+
+    // rec.log_static(
+    //     "/six_dof_arm/base_link/ee_path",
+    //     &rerun::Transform3D::IDENTITY,
+    // )?;
+    rec.log_static(
+        "/six_dof_arm/base_link/ee_path",
+        &rerun::archetypes::CoordinateFrame::new("base_link"),
+    )?;
+    rec.log_static(
+        "/six_dof_arm/base_link/ee_marker",
+        &rerun::archetypes::CoordinateFrame::new("base_link"),
+    )?;
+
+    rec.log(
+        "/six_dof_arm/base_link/ee_path",
+        &rerun::LineStrips3D::new([pose_path.clone()])
+            .with_colors([[80_u8, 200, 255]])
+            .with_radii([0.005]),
+    )?;
 
     let mut ee_path: Vec<[f32; 3]> = Vec::new();
 

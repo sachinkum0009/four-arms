@@ -14,7 +14,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let chain = Chain::from_urdf(&file_path)?;
     let rec = RecordingStreamBuilder::new("ik_planner_example")
         .recording_id("run-1")
-        .save("run-1.rrd")?;
+        .connect_grpc()?;
 
     for t in 0..10 {
         rec.set_time_sequence("step", t);
