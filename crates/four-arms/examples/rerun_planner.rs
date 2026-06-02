@@ -1,6 +1,6 @@
 use four_arms::chain::Chain;
-use four_arms::planner::{Planner, RRT};
-use four_arms::robot::Pose;
+use four_arms::planner::RRT;
+use four_arms::planner::smoother::CubicSplineSmoother;
 use rerun::RecordingStreamBuilder;
 use rerun::external::re_importer::UrdfTree;
 use rerun::external::{re_log, urdf_rs};
@@ -9,44 +9,45 @@ use rerun::external::{re_log, urdf_rs};
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     re_log::setup_logging();
     let urdf_path = "/Users/mac/zzzzz/rust/robotics/robotics/urdf/my_robot2.urdf";
+
     let chain = Chain::from_urdf(urdf_path)?;
     let rec = RecordingStreamBuilder::new("ik_planner_example")
         .recording_id("run-1")
         .connect_grpc()?;
 
-    // for t in 0..10 {
-    //     rec.set_time_sequence("step", t);
-    //     let tf = t as f64;
-    //     rec.log()
-    // }
-
     rec.log_file_from_path(urdf_path, None, true)?;
     let urdf = UrdfTree::from_file_path(urdf_path, None)?;
 
-    // Log ee_path and ee_marker directly under base_link in the TF tree
-    // so Rerun can resolve the transform chain without any TF lookup needed
-    // let ee_path_entity = "/six_dof_arm/base_link/ee_path";
-    // let ee_marker_entity = "/six_dof_arm/base_link/ee_marker";
-
     let ee_path_entity = "/six_dof_arm/base_link/ee_path";
     let ee_marker_entity = "/six_dof_arm/base_link/ee_marker";
+    let smooth_ee_path_entity = "/six_dof_arm/base_link/smooth_ee_path";
 
     let joint_limits = chain.get_joint_limits();
     let start_joints = [1.5, 0.2, 0.3, 0.3, 0.0, 0.0];
     let goal_joints = [-1.5, 1.3, 1.4, 1.3, 1.0, 1.5];
     let rrt = RRT::new(0.2, 500, joint_limits);
     let traj = rrt.plan_traj(&start_joints, &goal_joints)?;
+    println!("original traj: {:?}", traj.clone());
 
+    let cubic_spline_smoother = CubicSplineSmoother {};
+    let smooth_traj = cubic_spline_smoother.smooth_traj(traj.clone(), 1.0, 2.0)?;
+    println!("smooth traj: {:?}", smooth_traj);
+
+    // Compute end-effector paths for both original and smooth trajectories
     let mut pose_path = Vec::new();
     for joints in traj.clone() {
         let pose = chain.forward_kinematics(&joints)?.position;
         pose_path.push(pose);
     }
 
-    // rec.log_static(
-    //     "/six_dof_arm/base_link/ee_path",
-    //     &rerun::Transform3D::IDENTITY,
-    // )?;
+    let mut smooth_pose_path = Vec::new();
+    for joints in traj.clone() {
+        let pose = chain.forward_kinematics(&joints)?.position;
+        let pos = [pose[0] as f32, pose[1] as f32, pose[2] as f32];
+        smooth_pose_path.push(pos);
+    }
+
+    // Register coordinate frame archetypes to ensure proper transform chain resolution
     rec.log_static(
         "/six_dof_arm/base_link/ee_path",
         &rerun::archetypes::CoordinateFrame::new("base_link"),
@@ -55,6 +56,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         "/six_dof_arm/base_link/ee_marker",
         &rerun::archetypes::CoordinateFrame::new("base_link"),
     )?;
+    rec.log_static(
+        smooth_ee_path_entity,
+        &rerun::archetypes::CoordinateFrame::new("base_link"),
+    )?;
+
+    // Log the smooth trajectory path in RED
+    if !smooth_pose_path.is_empty() {
+        rec.log_static(
+            smooth_ee_path_entity,
+            &rerun::LineStrips3D::new([smooth_pose_path])
+                .with_colors([[255_u8, 0, 0]]) // Red color
+                .with_radii([0.006]), // Slightly thicker to distinguish from original path
+        )?;
+    }
 
     rec.log(
         "/six_dof_arm/base_link/ee_path",
@@ -65,7 +80,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let mut ee_path: Vec<[f32; 3]> = Vec::new();
 
-    for (step, planned_joints) in traj.iter().enumerate() {
+    for (step, planned_joints) in smooth_traj.iter().enumerate() {
         rec.set_time_sequence("step", step as i64);
 
         // Animate URDF joints
@@ -78,13 +93,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             rec.log("/transforms", &joint_transform)?;
         }
 
-        // Forward kinematics → end-effector position
+        // Forward kinematics → original end-effector position animation
         if let Ok(pose) = chain.forward_kinematics(planned_joints) {
             let p = pose.position;
             let pos = [p[0] as f32, p[1] as f32, p[2] as f32];
             ee_path.push(pos);
 
-            // Current EE marker — child of base_link so TF resolves
+            // Current EE marker
             rec.log(
                 ee_marker_entity,
                 &rerun::Points3D::new([pos])
@@ -92,7 +107,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     .with_colors([[255_u8, 100, 30]]),
             )?;
 
-            // Growing line — child of base_link so TF resolves
+            // Growing line for the raw trajectory
             if ee_path.len() >= 2 {
                 rec.log(
                     ee_path_entity,
@@ -104,7 +119,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     }
 
-    // Final complete path as static
+    // Final complete raw path as static
     if !ee_path.is_empty() {
         rec.log_static(
             ee_path_entity,

@@ -26,4 +26,12 @@ pub enum FourArmError {
     /// Triggered when the motion planner fails to find a valid collision-free path or trajectory.
     #[error("Failed to plan the trajectory: {0}")]
     TrajPlanError(String),
+
+    /// Failed to Smooth the trajectory
+    #[error("Failed to smooth the trajectory: {0}")]
+    TrajSmoothError(String),
+
+    /// Function not implemented
+    #[error("Function not implemented")]
+    FunctionNotImplemented,
 }
