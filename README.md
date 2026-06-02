@@ -10,5 +10,5 @@
 - [X] Load URDF file
 - [X] Forward Kinematics
 - [X] Inverse Kinematics
-- [ ] RRT Planner
-- [ ] Traj Optimizer (Chomp)
+- [X] RRT Planner
+- [X] Traj Optimizer (Cubic Smoother Spline)
