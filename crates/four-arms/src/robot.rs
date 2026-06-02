@@ -245,6 +245,8 @@ pub enum Geometry {
 }
 
 #[derive(Debug)]
+/// Joint struct
+///
 pub struct Joint {
     pub name: String,
     pub joint_type: String,
@@ -264,6 +266,9 @@ pub struct Limit {
 }
 
 #[derive(Debug, Clone, Copy)]
+/// Pose struct
+///
+/// holds position and rotation
 pub struct Pose {
     pub position: [f64; 3],
     pub rotation: [f64; 4], // Quaternion (x, y, z, w)
@@ -273,6 +278,9 @@ impl Pose {
     pub fn from_parts(translation: Translation3<f64>, rotation: UnitQuaternion<f64>) -> Self {
         let position = [translation.x, translation.y, translation.z];
         let rotation = [rotation.i, rotation.j, rotation.k, rotation.w];
+        Self { position, rotation }
+    }
+    pub fn new(position: [f64; 3], rotation: [f64; 4]) -> Self {
         Self { position, rotation }
     }
 }
