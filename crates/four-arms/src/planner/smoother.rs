@@ -4,9 +4,9 @@ use crate::{errors::FourArmError, planner::Trajectory};
 
 /// Cubic smoothing splines
 ///
-/// doc: https://www.centerspace.net/smoothing-cubic-splines
+/// doc: <https://www.centerspace.net/smoothing-cubic-splines>
 ///
-/// https://docs.scipy.org/doc/scipy/tutorial/interpolate/smoothing_splines.html
+/// <https://docs.scipy.org/doc/scipy/tutorial/interpolate/smoothing_splines.html>
 ///
 pub struct CubicSplineSmoother {}
 
