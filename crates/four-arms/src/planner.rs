@@ -24,6 +24,14 @@ use crate::{
 
 pub trait Planner: Default {
     fn new(step_size: f64, max_iter: usize) -> Self;
+    /// Plans the trajectory from start pose to goal pose
+    ///
+    /// # Arguments
+    /// - start_pos: Pose
+    /// - goal_pos: Pose
+    ///
+    /// # Return
+    /// - Result<Vec<Joint>, FourArmError>
     fn plan(&self, start_pos: &Pose, goal_pos: &Pose) -> Result<Vec<Joint>, FourArmError>;
 }
 

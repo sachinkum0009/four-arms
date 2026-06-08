@@ -34,4 +34,8 @@ pub enum FourArmError {
     /// Function not implemented
     #[error("Function not implemented")]
     FunctionNotImplemented,
+
+    /// Tree is empty
+    #[error("Tree is empty: {0}")]
+    EmptyTree(String),
 }

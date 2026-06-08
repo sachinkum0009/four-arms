@@ -9,7 +9,7 @@ use rand::RngExt;
 struct RRTNode {
     config: JointState,
     parent_idx: Option<usize>,
-    // cost: f64,
+    cost: f64,
 }
 
 /// Rapidly Random exploring Tree
@@ -62,6 +62,7 @@ impl RRTStar {
         let mut tree = vec![RRTNode {
             config: start_joints.to_vec(),
             parent_idx: None,
+            cost: 0.0, // initial cost 0
         }];
 
         let mut rng = rand::rng();
@@ -91,48 +92,105 @@ impl RRTStar {
                 })
                 .unwrap();
 
-            if let Some(new_config) = nearest_node
-                .config
-                .step_towards(&rand_config, self.step_size)
-            {
-                if !new_config.is_in_collision() {
-                    tree.push(RRTNode {
-                        config: new_config.clone(),
-                        parent_idx: Some(nearest_idx),
-                    });
+            let nearest_config = nearest_node.config.clone();
+            let new_config = match nearest_config.step_towards(&rand_config, self.step_size) {
+                Some(c) => c,
+                None => continue,
+            };
 
-                    if new_config.distance(goal_joints) < self.step_size {
-                        if !goal_joints.is_in_collision() {
-                            tree.push(RRTNode {
-                                config: goal_joints.to_vec(),
-                                parent_idx: Some(tree.len() - 1),
-                            });
-                            goal_reached = true;
-                            break;
-                        }
+            if new_config.is_in_collision() {
+                continue;
+            }
+
+            let near_indices: Vec<usize> = tree
+                .iter()
+                .enumerate()
+                .filter(|(_, node)| node.config.distance(&new_config) <= self.radius)
+                .map(|(i, _)| i)
+                .collect();
+
+            let (best_parent_idx, best_cost) = near_indices.iter().fold(
+                (nearest_idx, f64::INFINITY),
+                |(best_idx, best_cost), &i| {
+                    let edge_cost = tree[i].config.distance(&new_config);
+                    let candidate_cost = tree[i].cost + edge_cost;
+                    // Only consider collision-free edges
+                    if candidate_cost < best_cost
+                    // && !self.path_in_collision(&tree[i].config, &new_config)
+                    {
+                        (i, candidate_cost)
+                    } else {
+                        (best_idx, best_cost)
                     }
+                },
+            );
+
+            let (best_parent_idx, best_cost) = if best_cost == f64::INFINITY {
+                let edge_cost = nearest_config.distance(&new_config);
+                let cost = tree[nearest_idx].cost + edge_cost;
+                (nearest_idx, cost)
+            } else {
+                (best_parent_idx, best_cost)
+            };
+
+            let new_idx = tree.len();
+            tree.push(RRTNode {
+                config: new_config.clone(),
+                parent_idx: Some(best_parent_idx),
+                cost: best_cost,
+            });
+
+            for &near_idx in &near_indices {
+                let edge_cost = new_config.distance(&tree[near_idx].config);
+                let potential_cost = best_cost + edge_cost;
+                if potential_cost < tree[near_idx].cost {
+                    tree[near_idx].parent_idx = Some(new_idx);
+                    tree[near_idx].cost = potential_cost;
                 }
+            }
+
+            if new_config.distance(goal_joints) < self.step_size {
+                let goal_cost = best_cost + new_config.distance(goal_joints);
+                tree.push(RRTNode {
+                    config: goal_joints.to_vec(),
+                    parent_idx: Some(new_idx),
+                    cost: goal_cost,
+                });
+                goal_reached = true;
+                break;
             }
         }
 
         if goal_reached {
-            let mut path = Vec::new();
-            let mut current_idx = tree.len() - 1;
-            while let Some(node) = tree.get(current_idx) {
-                path.push(node.config.clone());
-                if let Some(parent) = node.parent_idx {
-                    current_idx = parent;
-                } else {
-                    break;
-                }
-            }
-            path.reverse();
+            let path = RRTStar::extract_path(&tree);
             Ok(path)
         } else {
             Err(FourArmError::TrajPlanError(
-                "RRT failed to find a valid trajectory within max_iter bounds.".to_string(),
+                "RRT* failed to find a valid trajectory within max_iter bounds.".to_string(),
             ))
         }
+    }
+
+    /// Extract the path
+    /// # Arguments
+    /// tree: &[RRTNode]
+    ///
+    /// # Result
+    /// Trajectory
+    fn extract_path(tree: &[RRTNode]) -> Trajectory {
+        let mut path = Vec::new();
+        let mut current_idx = tree.len() - 1;
+
+        while let Some(node) = tree.get(current_idx) {
+            path.push(node.config.clone());
+            if let Some(parent) = node.parent_idx {
+                current_idx = parent;
+            } else {
+                break;
+            }
+        }
+        path.reverse();
+        path
     }
 }
 

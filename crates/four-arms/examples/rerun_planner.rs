@@ -1,12 +1,15 @@
 use four_arms::chain::Chain;
-use four_arms::planner::RRT;
 use four_arms::planner::smoother::CubicSplineSmoother;
+use four_arms::planner::{RRT, RRTConnect, RRTStar};
+use four_arms::robot::Pose;
 use rerun::RecordingStreamBuilder;
 use rerun::external::re_importer::UrdfTree;
 use rerun::external::{re_log, urdf_rs};
+use tracing::{Level, Span, error, info, warn};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // tracing_subscriber::fmt().init();
     re_log::setup_logging();
     let urdf_path = "/Users/mac/zzzzz/rust/robotics/robotics/urdf/my_robot2.urdf";
 
@@ -23,15 +26,35 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let smooth_ee_path_entity = "/six_dof_arm/base_link/smooth_ee_path";
 
     let joint_limits = chain.get_joint_limits();
-    let start_joints = [1.5, 0.2, 0.3, 0.3, 0.0, 0.0];
-    let goal_joints = [-1.5, 1.3, 1.4, 1.3, 1.0, 1.5];
-    let rrt = RRT::new(0.2, 500, joint_limits);
+    let start_pose = Pose::new(
+        [0.20900953541769549, 0.2, 1.1938682645080299],
+        [
+            0.07664507071083379,
+            0.33035508016638776,
+            0.37440638599328097,
+            0.863024282550289,
+        ],
+    );
+    let initial_joints = [0.0; 6];
+    let start_joints = chain.inverse_kinematics(&start_pose, &initial_joints, 50, 0.1, 0.2)?; // [1.5, 0.2, 0.3, 0.3, 0.0, 0.0];
+    let goal_pose = Pose::new(
+        [0.20900953541769549, -0.2, 0.5],
+        [
+            0.07664507071083379,
+            0.33035508016638776,
+            0.37440638599328097,
+            0.863024282550289,
+        ],
+    );
+    let goal_joints = chain.inverse_kinematics(&goal_pose, &initial_joints, 50, 0.1, 0.2)?; // [-1.5, 1.3, 1.4, 1.3, 1.0, 1.5];
+    let rrt = RRTConnect::new(0.3, 500, joint_limits);
+    // let rrt = RRTStar::new(0.3, 500, joint_limits, 0.2);
     let traj = rrt.plan_traj(&start_joints, &goal_joints)?;
-    println!("original traj: {:?}", traj.clone());
+    info!("original traj: {:?}", traj.clone());
 
     let cubic_spline_smoother = CubicSplineSmoother {};
     let smooth_traj = cubic_spline_smoother.smooth_traj(traj.clone(), 1.0, 2.0)?;
-    println!("smooth traj: {:?}", smooth_traj);
+    info!("smooth traj: {:?}", smooth_traj);
 
     // Compute end-effector paths for both original and smooth trajectories
     let mut pose_path = Vec::new();
@@ -129,6 +152,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         )?;
     }
 
-    println!("Done!");
+    info!("Done!");
     Ok(())
 }

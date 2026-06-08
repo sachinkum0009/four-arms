@@ -23,9 +23,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         rec.log("/arm/elbow", &rerun::Scalars::single((tf * 0.5).cos()))?;
     }
 
-    // let joints1 = [0.0, 0.1, 0.2, 0.3, 0.4, 0.5];
-    // let pose = chain.forward_kinematics(&joints1)?;
-    // println!("pose: {:?}", pose);
+    let joints1 = [0.0, 0.1, 0.2, 0.3, 0.4, 0.5];
+    let pose = chain.forward_kinematics(&joints1)?;
+    println!("pose: {:?}", pose);
     // let joints = [0.3, -0.3, 0.4, 0.3, 0.4, 0.5];
     // let pose = chain.forward_kinematics(&joints)?;
     // println!("pose: {:?}", pose);
@@ -40,13 +40,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     //
     // println!("trajectory of joints: {:?}", traj);
 
-    let joint_limits = chain.get_joint_limits();
-    let start_joints = [0.0, 0.2, 0.3, 0.3];
-    let goal_joints = [1.0, 1.3, 1.4, 1.3];
-    let rrt = RRT::new(0.2, 100, joint_limits);
-    let traj = rrt.plan_traj(&start_joints, &goal_joints)?;
-    for joint in traj {
-        println!("joints: {:?}", joint);
-    }
+    // let joint_limits = chain.get_joint_limits();
+    // let start_joints = [0.0, 0.2, 0.3, 0.3];
+    // let goal_joints = [1.0, 1.3, 1.4, 1.3];
+    // let rrt = RRT::new(0.2, 100, joint_limits);
+    // let traj = rrt.plan_traj(&start_joints, &goal_joints)?;
+    // for joint in traj {
+    //     println!("joints: {:?}", joint);
+    // }
     Ok(())
 }
