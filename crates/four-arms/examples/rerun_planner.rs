@@ -1,7 +1,7 @@
 use four_arms::chain::Chain;
-use four_arms::planner::smoother::CubicSplineSmoother;
 use four_arms::planner::{RRT, RRTConnect, RRTStar};
 use four_arms::robot::Pose;
+use four_arms::smoother::CubicSplineSmoother;
 use rerun::RecordingStreamBuilder;
 use rerun::external::re_importer::UrdfTree;
 use rerun::external::{re_log, urdf_rs};

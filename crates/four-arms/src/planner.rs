@@ -9,7 +9,6 @@ mod prm;
 mod rrt;
 mod rrt_connect;
 mod rrt_star;
-pub mod smoother;
 
 pub use chomp::CHOMP;
 pub use prm::PRM;
@@ -82,5 +81,5 @@ impl ConfigExt for [f64] {
 }
 
 // types
-type JointState = Vec<f64>;
-type Trajectory = Vec<JointState>;
+pub type JointState = Vec<f64>;
+pub type Trajectory = Vec<JointState>;

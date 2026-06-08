@@ -9,6 +9,15 @@ use nalgebra::{
 use quick_xml::de::from_str;
 use std::fs;
 
+/// Box struct
+///
+#[derive(Default)]
+pub struct BoxSpace {
+    pub height: f64,
+    pub width: f64,
+    pub lenght: f64,
+}
+
 pub struct Chain {
     pub name: String,
     pub links: Vec<Link>,
@@ -252,21 +261,15 @@ impl Chain {
         )))
     }
 
-    /// TODO: Remove old function
-    /// Returns the Vector containing limits
-    // fn get_joint_limits(&self) -> Vec<Limit> {
-    //     self.joints
-    //         .iter()
-    //         .filter_map(|joint| {
-    //             joint.limit.as_ref().map(|limit| Limit {
-    //                 lower: limit.lower,
-    //                 upper: limit.upper,
-    //                 effort: limit.effort,
-    //                 velocity: limit.velocity,
-    //             })
-    //         })
-    //         .collect()
-    // }
+    // TODO(Sachin): Implement functionality to derive the workspace from joint configuration
+    /// Get workable area around the robot
+    pub fn get_workspace(&self) -> Result<BoxSpace, FourArmError> {
+        Ok(self.calculate_workspace())
+    }
+
+    fn calculate_workspace(&self) -> BoxSpace {
+        BoxSpace::default()
+    }
 
     fn compute_jacobian(&self, joint_angles: &[f64]) -> Result<DMatrix<f64>, FourArmError> {
         let joint_size = joint_angles.len();

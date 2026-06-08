@@ -14,3 +14,5 @@ pub mod errors;
 pub mod planner;
 /// Contains the struct for Link, Joint, UrdfRobot
 pub mod robot;
+/// Containers algorithm like Cubic Smoother Splines
+pub mod smoother;
