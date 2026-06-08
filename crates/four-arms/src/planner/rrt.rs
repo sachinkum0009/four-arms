@@ -124,26 +124,35 @@ impl RRT {
 
         // Reconstruct the path if the goal was successfully reached
         if goal_reached {
-            let mut path = Vec::new();
-            let mut current_idx = tree.len() - 1;
-
-            while let Some(node) = tree.get(current_idx) {
-                path.push(node.config.clone());
-                if let Some(parent) = node.parent_idx {
-                    current_idx = parent;
-                } else {
-                    break;
-                }
-            }
-
-            // Path is constructed from goal to start, so reverse it
-            path.reverse();
+            let path = RRT::extract_path(&tree);
             Ok(path)
         } else {
             Err(FourArmError::TrajPlanError(
                 "RRT failed to find a valid trajectory within max_iter bounds.".to_string(),
             ))
         }
+    }
+
+    /// Extract the path
+    /// # Arguments
+    /// tree: &[RRTNode]
+    ///
+    /// # Result
+    /// Trajectory
+    fn extract_path(tree: &[RRTNode]) -> Trajectory {
+        let mut path = Vec::new();
+        let mut current_idx = tree.len() - 1;
+
+        while let Some(node) = tree.get(current_idx) {
+            path.push(node.config.clone());
+            if let Some(parent) = node.parent_idx {
+                current_idx = parent;
+            } else {
+                break;
+            }
+        }
+        path.reverse();
+        path
     }
 }
 
