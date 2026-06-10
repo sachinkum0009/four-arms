@@ -134,4 +134,12 @@ impl KDTree {
         }
         best
     }
+    pub fn clear(&mut self) -> bool {
+        if self.root.is_some() {
+            self.root = None;
+            true
+        } else {
+            false
+        }
+    }
 }
