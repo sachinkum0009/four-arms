@@ -11,6 +11,8 @@ A rust crate to manipulate Robot Arm
 
 pub mod chain;
 pub mod errors;
+/// Contains the implementation of KDTree
+pub mod kdtree;
 pub mod planner;
 /// Contains the struct for Link, Joint, UrdfRobot
 pub mod robot;
