@@ -24,3 +24,7 @@ path = "examples/rerun_planner.rs"
 [[example]]
 name = "kd_tree_ex"
 path = "examples/kd_tree_ex.rs"
+
+[[example]]
+name = "dijstra_ex"
+path = "examples/dijstra_ex.rs"
