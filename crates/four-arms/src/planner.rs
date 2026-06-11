@@ -5,6 +5,7 @@
  */
 
 mod chomp;
+pub mod dijstra;
 mod prm;
 mod rrt;
 mod rrt_connect;
