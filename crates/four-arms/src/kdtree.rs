@@ -2,7 +2,7 @@ use std::cmp::Ordering;
 use std::f64;
 
 /// Point
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct Point {
     pub coords: Vec<f64>,
 }
@@ -25,6 +25,7 @@ impl Point {
 }
 
 /// KDNode
+#[derive(Debug)]
 pub struct KDNode {
     pub point: Point,
     pub left: Option<Box<KDNode>>,
@@ -102,6 +103,7 @@ impl KDNode {
 }
 
 /// KDTree is a space partitioning data structure for organizing points in a k-dimensional space.
+#[derive(Debug)]
 pub struct KDTree {
     pub root: Option<KDNode>,
     k: usize,
@@ -141,5 +143,8 @@ impl KDTree {
         } else {
             false
         }
+    }
+    pub fn dim(self) -> usize {
+        self.k
     }
 }
