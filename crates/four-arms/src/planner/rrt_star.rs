@@ -1,10 +1,11 @@
+use rand::RngExt;
+
 use crate::{
     errors::FourArmError,
     planner::{ConfigExt, JointState, Trajectory},
     robot::{Joint, Pose},
 };
 
-use rand::RngExt;
 
 struct RRTNode {
     config: JointState,
@@ -41,7 +42,7 @@ impl RRTStar {
 
     /// Plans the trajectory from start pose
     /// to goal pose
-    pub fn plan(&self, start_pos: &Pose, goal_pos: &Pose) -> Result<Vec<Joint>, FourArmError> {
+    pub fn plan(&self, _start_pos: &Pose, _goal_pos: &Pose) -> Result<Vec<Joint>, FourArmError> {
         Err(FourArmError::TrajPlanError(
             "Failed to plan the trajectory".to_string(),
         ))

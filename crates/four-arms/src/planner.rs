@@ -10,12 +10,16 @@ mod prm;
 mod rrt;
 mod rrt_connect;
 mod rrt_star;
+mod stomp;
+mod traj_opt;
 
 pub use chomp::CHOMP;
 pub use prm::PRM;
 pub use rrt::RRT;
 pub use rrt_connect::RRTConnect;
 pub use rrt_star::RRTStar;
+pub use stomp::STOMP;
+pub use traj_opt::TrajOpt;
 
 use crate::{
     errors::FourArmError,

@@ -1,5 +1,5 @@
 use four_arms::chain::Chain;
-use four_arms::planner::{RRT, RRTConnect, RRTStar};
+use four_arms::planner::{CHOMP, PRM, Planner, RRT, RRTConnect, RRTStar, STOMP};
 use four_arms::robot::Pose;
 use four_arms::smoother::CubicSplineSmoother;
 use rerun::RecordingStreamBuilder;
@@ -47,8 +47,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         ],
     );
     let goal_joints = chain.inverse_kinematics(&goal_pose, &initial_joints, 50, 0.1, 0.2)?; // [-1.5, 1.3, 1.4, 1.3, 1.0, 1.5];
-    let rrt = RRTConnect::new(0.3, 500, joint_limits);
+    // let mut rrt = PRM::new(2000, 0.1, 6, None, joint_limits); // RRTConnect::new(0.3, 500, joint_limits);
+    // let rrt = RRTConnect::new(0.1, 500, joint_limits);
     // let rrt = RRTStar::new(0.3, 500, joint_limits, 0.2);
+    // let rrt = CHOMP::new(0.1, 1000);
+    // let rrt = CHOMP::new(0.1, 200, 0.5, 0.5, 1.0, 30, 1e-3);
+    let rrt = STOMP::new(0.1, 100, 0.5, 0.1, 1.0, 1.0, 50, 1e-3, 20);
     let traj = rrt.plan_traj(&start_joints, &goal_joints)?;
     info!("original traj: {:?}", traj.clone());
 
@@ -64,7 +68,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     let mut smooth_pose_path = Vec::new();
-    for joints in traj.clone() {
+    for joints in smooth_traj.clone() {
         let pose = chain.forward_kinematics(&joints)?.position;
         let pos = [pose[0] as f32, pose[1] as f32, pose[2] as f32];
         smooth_pose_path.push(pos);

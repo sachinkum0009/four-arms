@@ -1,7 +1,7 @@
 use crate::errors::FourArmError;
-use crate::kdtree::{KDNode, KDTree, Point};
-use rand::{Rng, RngExt};
-use std::collections::{HashMap, VecDeque};
+use crate::kdtree::{KDTree, Point};
+use rand::RngExt;
+use std::collections::VecDeque;
 use std::f64::consts::PI;
 
 // --- PRM Structures ---
@@ -23,16 +23,34 @@ pub struct PRM {
     pub step_size: f64,
     pub k_nearest: usize,
     pub kd_tree: Option<KDTree>,
+    pub nodes: Vec<Point>,
     joint_limits: Vec<(f64, f64)>,
 }
 
 impl PRM {
-    pub fn new() -> Self {
+    pub fn new(
+        max_iter: usize,
+        step_size: f64,
+        k_nearest: usize,
+        kd_tree: Option<KDTree>,
+        joint_limits: Vec<(f64, f64)>,
+    ) -> Self {
+        Self {
+            max_iter,
+            step_size,
+            k_nearest,
+            kd_tree,
+            nodes: Vec::new(),
+            joint_limits,
+        }
+    }
+    pub fn default() -> Self {
         Self {
             max_iter: 1000,
             step_size: 0.1,
             k_nearest: 5,
             kd_tree: None,
+            nodes: Vec::new(),
             joint_limits: vec![
                 (-PI, PI), // Joint 1
                 (-PI, PI), // Joint 2
@@ -87,45 +105,69 @@ impl PRM {
         }
 
         // Sample nodes
+        self.nodes.clear();
         for _ in 0..self.max_iter {
             let config = self.sample_config();
             if self.is_collision_free(&config) {
+                let point = Point::new(config);
                 if let Some(tree) = self.kd_tree.as_mut() {
-                    tree.insert(Point::new(config));
+                    tree.insert(point.clone());
                 }
+                self.nodes.push(point);
             }
         }
     }
 
-    /// Find the nearest node in the roadmap to a given configuration
-    fn find_nearest(&self, config: &[f64]) -> Option<Point> {
-        self.kd_tree
-            .as_ref()
-            .and_then(|tree| tree.nearest_neighbor(&Point::new(config.to_vec())))
-            .map(|point| point)
+    /// Find the index of the nearest node in the roadmap to a given configuration
+    fn find_nearest_idx(&self, config: &[f64]) -> Option<usize> {
+        let query = Point::new(config.to_vec());
+        let nearest = self.kd_tree.as_ref()?.nearest_neighbor(&query)?;
+        self.nodes.iter().position(|n| *n == nearest)
+    }
+
+    /// Find k-nearest neighbor indices (brute force)
+    fn k_nearest_neighbors(&self, config: &[f64], k: usize) -> Vec<usize> {
+        let query = Point::new(config.to_vec());
+        let mut indices: Vec<usize> = (0..self.nodes.len()).collect();
+        indices.sort_by(|a, b| {
+            let da = self.nodes[*a].distance_squared(&query);
+            let db = self.nodes[*b].distance_squared(&query);
+            da.partial_cmp(&db).unwrap_or(std::cmp::Ordering::Equal)
+        });
+        indices.truncate(k);
+        indices
     }
 
     /// Query the roadmap for a path between start and goal
     pub fn query(&self, start: &[f64], goal: &[f64]) -> Result<Vec<Vec<f64>>, FourArmError> {
         if !self.is_collision_free(start) || !self.is_collision_free(goal) {
-            return Err(FourArmError::TrajPlanError("Collsion detected".to_string()));
+            return Err(FourArmError::TrajPlanError(
+                "Collision detected".to_string(),
+            ));
         }
 
-        let tree = self
-            .kd_tree
-            .as_ref()
-            .ok_or(FourArmError::TrajPlanError("not path".to_string()))?;
+        if self.nodes.is_empty() {
+            return Err(FourArmError::TrajPlanError(
+                "Roadmap is empty, call build_roadmap first".to_string(),
+            ));
+        }
+
         let start_idx = self
-            .find_nearest(start)
-            .ok_or(FourArmError::TrajPlanError("not path".to_string()))?;
+            .find_nearest_idx(start)
+            .ok_or(FourArmError::TrajPlanError(
+                "Could not find start node".to_string(),
+            ))?;
         let goal_idx = self
-            .find_nearest(goal)
-            .ok_or(FourArmError::TrajPlanError("not path".to_string()))?;
+            .find_nearest_idx(goal)
+            .ok_or(FourArmError::TrajPlanError(
+                "Could not find goal node".to_string(),
+            ))?;
 
         // BFS to find a path in the roadmap
+        let num_nodes = self.nodes.len();
         let mut queue = VecDeque::new();
-        let mut visited = vec![false; self.max_iter];
-        let mut parent = vec![None; self.max_iter];
+        let mut visited = vec![false; num_nodes];
+        let mut parent = vec![None; num_nodes];
 
         queue.push_back(start_idx);
         visited[start_idx] = true;
@@ -136,26 +178,27 @@ impl PRM {
                 let mut path = Vec::new();
                 let mut node = current;
                 while let Some(p) = parent[node] {
-                    path.push(tree.get_point(node).unwrap().coords.clone());
+                    path.push(self.nodes[node].coords.clone());
                     node = p;
                 }
-                path.push(tree.get_point(start_idx).unwrap().coords.clone());
+                path.push(self.nodes[start_idx].coords.clone());
                 path.reverse();
                 path.push(goal.to_vec());
                 return Ok(path);
             }
 
             // Get neighbors (k-nearest)
-            let neighbors = tree(
-                &Point::new(tree.get_point(current).unwrap().coords.clone()),
-                self.k_nearest,
-            );
+            let neighbors = self.k_nearest_neighbors(&self.nodes[current].coords, self.k_nearest);
 
-            for (neighbor_idx, _) in neighbors {
+            for &neighbor_idx in &neighbors {
+                if neighbor_idx == current {
+                    continue;
+                }
                 if !visited[neighbor_idx] {
-                    let from = tree.get_point(current).unwrap().coords.clone();
-                    let to = tree.get_point(neighbor_idx).unwrap().coords.clone();
-                    if self.is_path_collision_free(&from, &to) {
+                    if self.is_path_collision_free(
+                        &self.nodes[current].coords,
+                        &self.nodes[neighbor_idx].coords,
+                    ) {
                         visited[neighbor_idx] = true;
                         parent[neighbor_idx] = Some(current);
                         queue.push_back(neighbor_idx);
@@ -168,17 +211,22 @@ impl PRM {
             "Failed to plan trajectory".to_string(),
         ))
     }
+
+    pub fn plan_traj(
+        &mut self,
+        start: &[f64],
+        goal: &[f64],
+    ) -> Result<Vec<Vec<f64>>, FourArmError> {
+        self.build_roadmap();
+        self.query(start, goal)
+    }
 }
 
 // --- Planner Trait ---
-pub trait Planner {
-    fn plan(&mut self, start: &[f64], goal: &[f64]) -> Result<Vec<Vec<f64>>, FourArmError>;
-}
+// pub trait Planner {
+//     fn plan_traj(&mut self, start: &[f64], goal: &[f64]) -> Result<Vec<Vec<f64>>, FourArmError>;
+// }
 
-impl Planner for PRM {
-    fn plan(&mut self, start: &[f64], goal: &[f64]) -> Result<Vec<Vec<f64>>, FourArmError> {
-        self.build_roadmap();
-        // self.query(start, goal)
-        Err(FourArmError::FunctionNotImplemented)
-    }
-}
+// impl Planner for PRM {
+
+// }
