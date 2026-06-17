@@ -2,7 +2,7 @@ use std::cmp::Ordering;
 use std::f64;
 
 /// Point
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Point {
     pub coords: Vec<f64>,
 }
@@ -15,7 +15,7 @@ impl Point {
         self.coords.len()
     }
 
-    fn distance_squared(&self, other: &Point) -> f64 {
+    pub fn distance_squared(&self, other: &Point) -> f64 {
         self.coords
             .iter()
             .zip(other.coords.iter())
