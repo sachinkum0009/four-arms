@@ -124,6 +124,7 @@ impl CHOMP {
         &self,
         start_joints: &[f64],
         goal_joints: &[f64],
+        initial_trajectory: Option<Trajectory>,
     ) -> Result<Trajectory, FourArmError> {
         let dof = start_joints.len();
         if dof == 0 || start_joints.len() != goal_joints.len() {
@@ -134,7 +135,11 @@ impl CHOMP {
         }
 
         let n = self.n_waypoints;
-        let mut traj = Self::init_trajectory(start_joints, goal_joints, n);
+
+        let mut traj = match initial_trajectory {
+            Some(initial_traj) => initial_traj,
+            None => Self::init_trajectory(start_joints, goal_joints, n),
+        };
 
         // N×N smoothness prior A = KᵀK  (singular — rank N−2).
         // Its nullspace is span(constant, linear) — second-differences of
