@@ -24,12 +24,11 @@
 - [X] RRT
 - [X] RRTConnect
 - [X] RRTStar
-- [ ] PRM
-- [ ] PRT
+- [X] PRM
 
 #### Optimization based Algorithms
-- [ ] CHOMP
-- [ ] STOMP
+- [X] CHOMP
+- [X] STOMP
 
 #### Hybrid/Framework based Algorithms
 - [ ] OMPL
