@@ -1,6 +1,6 @@
 use crate::{
     errors::FourArmError,
-    planner::{ConfigExt, JointState, Planner, Trajectory},
+    planner::{ConfigExt, JointState, Trajectory},
     robot::{Joint, Pose},
 };
 
@@ -42,7 +42,7 @@ impl RRT {
 
     /// Plans the trajectory from start pose
     /// to goal pose
-    fn plan(&self, start_pos: &Pose, goal_pos: &Pose) -> Result<Vec<Joint>, FourArmError> {
+    fn plan(&self, _start_pos: &Pose, _goal_pos: &Pose) -> Result<Vec<Joint>, FourArmError> {
         Err(FourArmError::TrajPlanError(
             "Failed to plan the trajectory".to_string(),
         ))

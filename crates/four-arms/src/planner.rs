@@ -5,16 +5,21 @@
  */
 
 mod chomp;
+pub mod dijstra;
 mod prm;
 mod rrt;
 mod rrt_connect;
 mod rrt_star;
+mod stomp;
+mod traj_opt;
 
 pub use chomp::CHOMP;
 pub use prm::PRM;
 pub use rrt::RRT;
 pub use rrt_connect::RRTConnect;
 pub use rrt_star::RRTStar;
+pub use stomp::STOMP;
+pub use traj_opt::TrajOpt;
 
 use crate::{
     errors::FourArmError,
@@ -23,14 +28,15 @@ use crate::{
 
 pub trait Planner: Default {
     fn new(step_size: f64, max_iter: usize) -> Self;
-    /// Plans the trajectory from start pose to goal pose
+    /// Plans the trajectory from a start pose to a goal pose.
     ///
     /// # Arguments
-    /// - start_pos: Pose
-    /// - goal_pos: Pose
+    /// * `start_pos` - The starting pose.
+    /// * `goal_pos` - The target pose.
     ///
-    /// # Return
-    /// - Result<Vec<Joint>, FourArmError>
+    /// # Returns
+    /// * `Result<Vec<Joint>, FourArmError>` - A vector of joint configurations if successful,
+    ///   or a `FourArmError` if planning fails.
     fn plan(&self, start_pos: &Pose, goal_pos: &Pose) -> Result<Vec<Joint>, FourArmError>;
 }
 

@@ -7,10 +7,10 @@ use std::env;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let file_path = "/Users/mac/zzzzz/rust/robotics/robotics/urdf/my_robot2.urdf".to_string();
-    // let file_path = env::args()
-    //     .nth(0)
-    //     .unwrap_or_else(|| "urdf/my_robot2.urdf".to_string());
+    // let file_path = "/Users/mac/zzzzz/rust/robotics/robotics/urdf/my_robot2.urdf".to_string();
+    let file_path = env::args()
+        .nth(0)
+        .unwrap_or_else(|| "urdf/my_robot2.urdf".to_string());
     let chain = Chain::from_urdf(&file_path)?;
     let rec = RecordingStreamBuilder::new("ik_planner_example")
         .recording_id("run-1")

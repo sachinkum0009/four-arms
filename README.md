@@ -17,3 +17,23 @@
 - [X] Inverse Kinematics
 - [X] RRT Planner
 - [X] Traj Optimizer (Cubic Smoother Spline)
+
+### Planning Algorithms
+
+#### Sampling based Algorithms
+- [X] RRT
+- [X] RRTConnect
+- [X] RRTStar
+- [X] PRM
+
+#### Optimization based Algorithms
+- [X] CHOMP
+- [X] STOMP
+
+#### Hybrid/Framework based Algorithms
+- [ ] OMPL
+- [ ] PRT (Probalistic Roadmap of Tree)
+
+### Smoother Algorithms
+- [X] Cubic Smoother Splines
+- [ ]

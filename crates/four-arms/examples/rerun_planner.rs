@@ -1,25 +1,29 @@
 use four_arms::chain::Chain;
-use four_arms::planner::{RRT, RRTConnect, RRTStar};
+use four_arms::planner::{CHOMP, PRM, Planner, RRT, RRTConnect, RRTStar, STOMP};
 use four_arms::robot::Pose;
 use four_arms::smoother::CubicSplineSmoother;
 use rerun::RecordingStreamBuilder;
 use rerun::external::re_importer::UrdfTree;
 use rerun::external::{re_log, urdf_rs};
+use std::env;
 use tracing::{Level, Span, error, info, warn};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // tracing_subscriber::fmt().init();
     re_log::setup_logging();
-    let urdf_path = "/Users/mac/zzzzz/rust/robotics/robotics/urdf/my_robot2.urdf";
+    // let urdf_path = "/Users/mac/zzzzz/rust/robotics/robotics/urdf/my_robot2.urdf";
+    let urdf_path = env::args()
+        .nth(0)
+        .unwrap_or_else(|| "urdf/my_robot2.urdf".to_string());
 
-    let chain = Chain::from_urdf(urdf_path)?;
+    let chain = Chain::from_urdf(&urdf_path)?;
     let rec = RecordingStreamBuilder::new("ik_planner_example")
         .recording_id("run-1")
         .connect_grpc()?;
 
-    rec.log_file_from_path(urdf_path, None, true)?;
-    let urdf = UrdfTree::from_file_path(urdf_path, None)?;
+    rec.log_file_from_path(&urdf_path, None, true)?;
+    let urdf = UrdfTree::from_file_path(&urdf_path, None)?;
 
     let ee_path_entity = "/six_dof_arm/base_link/ee_path";
     let ee_marker_entity = "/six_dof_arm/base_link/ee_marker";
@@ -47,9 +51,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         ],
     );
     let goal_joints = chain.inverse_kinematics(&goal_pose, &initial_joints, 50, 0.1, 0.2)?; // [-1.5, 1.3, 1.4, 1.3, 1.0, 1.5];
-    let rrt = RRTConnect::new(0.3, 500, joint_limits);
+    // let mut rrt = PRM::new(2000, 0.1, 6, None, joint_limits); // RRTConnect::new(0.3, 500, joint_limits);
+    // let rrt = RRTConnect::new(0.1, 500, joint_limits);
     // let rrt = RRTStar::new(0.3, 500, joint_limits, 0.2);
-    let traj = rrt.plan_traj(&start_joints, &goal_joints)?;
+    // let rrt = CHOMP::new(0.1, 1000);
+    let rrt = CHOMP::new(0.1, 200, 0.5, 0.5, 1.0, 30, 1e-3);
+    // let rrt = STOMP::new(0.1, 100, 0.5, 0.1, 1.0, 1.0, 50, 1e-3, 20);
+    let traj = rrt.plan_traj(&start_joints, &goal_joints, None)?;
     info!("original traj: {:?}", traj.clone());
 
     let cubic_spline_smoother = CubicSplineSmoother {};
@@ -64,7 +72,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     let mut smooth_pose_path = Vec::new();
-    for joints in traj.clone() {
+    for joints in smooth_traj.clone() {
         let pose = chain.forward_kinematics(&joints)?.position;
         let pos = [pose[0] as f32, pose[1] as f32, pose[2] as f32];
         smooth_pose_path.push(pos);

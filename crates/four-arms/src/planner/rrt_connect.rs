@@ -2,7 +2,7 @@ use rand::RngExt;
 
 use crate::{
     errors::FourArmError,
-    planner::{ConfigExt, JointState, Planner, Trajectory},
+    planner::{ConfigExt, JointState, Trajectory},
     robot::{Joint, Pose},
 };
 
@@ -35,7 +35,7 @@ impl RRTConnect {
     /// Plans the trajectory from start pose
     /// to goal pose
     ///
-    fn plan(&self, start_pos: &Pose, goal_pos: &Pose) -> Result<Vec<Joint>, FourArmError> {
+    fn plan(&self, _start_pos: &Pose, _goal_pos: &Pose) -> Result<Vec<Joint>, FourArmError> {
         Err(FourArmError::TrajPlanError(
             "Failed to plan the trajectory".to_string(),
         ))
@@ -75,11 +75,18 @@ impl RRTConnect {
         }];
 
         let mut rng = rand::rng();
-        let mut goal_reached = false;
         let goal_bias = 0.10;
+        let mut swapped = false;
 
         for _ in 0..self.max_iter {
-            let start_rand_config = if rng.random_bool(goal_bias) {
+            let (extend_tree, connect_tree) = if swapped {
+                (&mut goal_tree, &mut start_tree)
+            } else {
+                (&mut start_tree, &mut goal_tree)
+            };
+
+            // --- SAMPLE & EXTEND ---
+            let rand_config = if rng.random_bool(goal_bias) {
                 goal_joints.to_vec()
             } else {
                 self.joint_limits
@@ -88,30 +95,31 @@ impl RRTConnect {
                     .collect::<Vec<f64>>()
             };
 
-            let (start_nearest_idx, start_nearest_config) = {
-                let (idx, node) = start_tree
+            let ext_nearest_idx = {
+                let (idx, _) = extend_tree
                     .iter()
                     .enumerate()
                     .min_by(|(_, a), (_, b)| {
-                        let dist_a = a.config.distance(&start_rand_config);
-                        let dist_b = b.config.distance(&start_rand_config);
-                        dist_a
-                            .partial_cmp(&dist_b)
+                        a.config
+                            .distance(&rand_config)
+                            .partial_cmp(&b.config.distance(&rand_config))
                             .unwrap_or(std::cmp::Ordering::Equal)
                     })
-                    .ok_or(FourArmError::EmptyTree("start_tree is empty".to_string()))?;
-                (idx, node.config.clone())
+                    .ok_or(FourArmError::EmptyTree("extend tree is empty".to_string()))?;
+                idx
             };
 
-            let start_extended = if let Some(new_config) =
-                start_nearest_config.step_towards(&start_rand_config, self.step_size)
+            let ext_new = if let Some(cfg) = extend_tree[ext_nearest_idx]
+                .config
+                .step_towards(&rand_config, self.step_size)
             {
-                if !new_config.is_in_collision() {
-                    start_tree.push(RRTNode {
-                        config: new_config.clone(),
-                        parent_idx: Some(start_nearest_idx),
+                if !cfg.is_in_collision() {
+                    let idx = extend_tree.len();
+                    extend_tree.push(RRTNode {
+                        config: cfg.clone(),
+                        parent_idx: Some(ext_nearest_idx),
                     });
-                    Some(new_config)
+                    Some((idx, cfg))
                 } else {
                     None
                 }
@@ -119,77 +127,99 @@ impl RRTConnect {
                 None
             };
 
-            if let Some(new_start_node) = start_extended {
-                let (goal_nearest_idx, goal_nearest_config) = {
-                    let (idx, node) = goal_tree
-                        .iter()
-                        .enumerate()
-                        .min_by(|(_, a), (_, b)| {
-                            a.config
-                                .distance(&new_start_node)
-                                .partial_cmp(&b.config.distance(&new_start_node))
-                                .unwrap_or(std::cmp::Ordering::Equal)
-                        })
-                        .ok_or(FourArmError::EmptyTree("goal_tree is empty".to_string()))?;
-                    (idx, node.config.clone())
-                };
-
-                if let Some(goal_new_config) =
-                    goal_nearest_config.step_towards(&new_start_node, self.step_size)
-                {
-                    if !goal_new_config.is_in_collision() {
-                        goal_tree.push(RRTNode {
-                            config: goal_new_config.clone(),
-                            parent_idx: Some(goal_nearest_idx),
-                        });
-
-                        // Check if the trees have met
-                        if goal_new_config.distance(&new_start_node) <= self.step_size {
-                            // return Ok(self.reconstruct_path(&start_tree, &goal_tree));
-                            goal_reached = true;
-                            break;
-                        }
-                    }
+            // --- CONNECT (repeatedly extend the other tree towards the new node) ---
+            if let Some((_, ext_new_config)) = ext_new {
+                if self.connect_trees(connect_tree, &ext_new_config) {
+                    let path = self.reconstruct_path(&start_tree, &goal_tree, swapped);
+                    return Ok(path);
                 }
             }
+
+            swapped = !swapped;
         }
-        if goal_reached {
-            let path = self.reconstruct_path(&start_tree, &goal_tree);
-            Ok(path)
-        } else {
-            Err(FourArmError::TrajPlanError(
-                "failed to plan trajectory".to_string(),
-            ))
+
+        Err(FourArmError::TrajPlanError(
+            "RRT-Connect failed to find a valid trajectory within max_iter".to_string(),
+        ))
+    }
+
+    /// Repeatedly extend `tree` towards `target` until either the target
+    /// is reached (returns `true`) or an obstacle blocks further progress
+    /// (returns `false`).
+    fn connect_trees(&self, tree: &mut Vec<RRTNode>, target: &[f64]) -> bool {
+        loop {
+            let nearest_idx = {
+                let (idx, _) = tree
+                    .iter()
+                    .enumerate()
+                    .min_by(|(_, a), (_, b)| {
+                        a.config
+                            .distance(target)
+                            .partial_cmp(&b.config.distance(target))
+                            .unwrap_or(std::cmp::Ordering::Equal)
+                    })
+                    .expect("connect_trees: tree should not be empty");
+                idx
+            };
+
+            match tree[nearest_idx].config.step_towards(target, self.step_size) {
+                Some(next) if !next.is_in_collision() => {
+                    let dist_to_target = next.distance(target);
+                    tree.push(RRTNode {
+                        config: next,
+                        parent_idx: Some(nearest_idx),
+                    });
+                    if dist_to_target <= self.step_size {
+                        return true;
+                    }
+                }
+                _ => return false,
+            }
         }
     }
 
-    fn reconstruct_path(&self, start_tree: &[RRTNode], goal_tree: &[RRTNode]) -> Trajectory {
-        let mut start_path = Vec::new();
-        let mut goal_path = Vec::new();
+    fn reconstruct_path(
+        &self,
+        start_tree: &[RRTNode],
+        goal_tree: &[RRTNode],
+        swapped: bool,
+    ) -> Trajectory {
+        let (tree_a, tree_b, swap_order) = if swapped {
+            (goal_tree, start_tree, true)
+        } else {
+            (start_tree, goal_tree, false)
+        };
 
-        let mut current_idx = start_tree.len() - 1;
-        while let Some(node) = start_tree.get(current_idx) {
-            start_path.push(node.config.clone());
-            if let Some(parent) = node.parent_idx {
-                current_idx = parent;
-            } else {
-                break;
+        let mut path_a = Vec::new();
+        let mut current_idx = tree_a.len() - 1;
+        while let Some(node) = tree_a.get(current_idx) {
+            path_a.push(node.config.clone());
+            match node.parent_idx {
+                Some(p) => current_idx = p,
+                None => break,
             }
         }
 
-        current_idx = goal_tree.len() - 1;
-        while let Some(node) = goal_tree.get(current_idx) {
-            goal_path.push(node.config.clone());
-            if let Some(parent) = node.parent_idx {
-                current_idx = parent;
-            } else {
-                break;
+        let mut path_b = Vec::new();
+        current_idx = tree_b.len() - 1;
+        while let Some(node) = tree_b.get(current_idx) {
+            path_b.push(node.config.clone());
+            match node.parent_idx {
+                Some(p) => current_idx = p,
+                None => break,
             }
         }
 
-        start_path.reverse();
-        start_path.extend(goal_path.into_iter().skip(1));
-        start_path
+        if swap_order {
+            path_a.reverse();
+            path_b.reverse();
+            path_b.extend(path_a.into_iter().skip(1));
+            path_b
+        } else {
+            path_a.reverse();
+            path_a.extend(path_b.into_iter().skip(1));
+            path_a
+        }
     }
 }
 
