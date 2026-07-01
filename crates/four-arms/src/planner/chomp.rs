@@ -124,7 +124,7 @@ impl CHOMP {
         &self,
         start_joints: &[f64],
         goal_joints: &[f64],
-        initial_trajectory: Option<Trajectory>,
+        initial_trajectory: Option<&Trajectory>,
     ) -> Result<Trajectory, FourArmError> {
         let dof = start_joints.len();
         if dof == 0 || start_joints.len() != goal_joints.len() {
@@ -137,7 +137,7 @@ impl CHOMP {
         let n = self.n_waypoints;
 
         let mut traj = match initial_trajectory {
-            Some(initial_traj) => initial_traj,
+            Some(initial_traj) => initial_traj.clone(),
             None => Self::init_trajectory(start_joints, goal_joints, n),
         };
 
