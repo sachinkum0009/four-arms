@@ -6,7 +6,7 @@ description = "Crate for using manipulation forward, inverse kinematics and use 
 readme = "../../README.md"
 repository = "https://github.com/sachinkum0009/four-arms"
 license = "Apache-2.0"
-keywords = ["fourarms", "robotics", "manipulatior", "rrt", "stomp", "chomp"]
+keywords = ["fourarms", "robotics", "manipulatior", "planner"]
 
 [dependencies]
 nalgebra = "0.35.0"
