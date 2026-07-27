@@ -1,12 +1,12 @@
 use four_arms::chain::Chain;
-use four_arms::planner::{CHOMP, PRM, Planner, RRT, RRTConnect, RRTStar, STOMP};
+use four_arms::planner::CHOMP;
 use four_arms::robot::Pose;
 use four_arms::smoother::CubicSplineSmoother;
 use rerun::RecordingStreamBuilder;
 use rerun::external::re_importer::UrdfTree;
 use rerun::external::{re_log, urdf_rs};
 use std::env;
-use tracing::{Level, Span, error, info, warn};
+use tracing::info;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -14,7 +14,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     re_log::setup_logging();
     // let urdf_path = "/Users/mac/zzzzz/rust/robotics/robotics/urdf/my_robot2.urdf";
     let urdf_path = env::args()
-        .nth(0)
+        .next()
         .unwrap_or_else(|| "urdf/my_robot2.urdf".to_string());
 
     let chain = Chain::from_urdf(&urdf_path)?;
@@ -29,7 +29,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let ee_marker_entity = "/six_dof_arm/base_link/ee_marker";
     let smooth_ee_path_entity = "/six_dof_arm/base_link/smooth_ee_path";
 
-    let joint_limits = chain.get_joint_limits();
+    let _joint_limits = chain.get_joint_limits();
     let start_pose = Pose::new(
         [0.20900953541769549, 0.2, 1.1938682645080299],
         [

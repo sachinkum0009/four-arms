@@ -10,6 +10,12 @@ use crate::{errors::FourArmError, planner::Trajectory};
 ///
 pub struct CubicSplineSmoother {}
 
+impl Default for CubicSplineSmoother {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl CubicSplineSmoother {
     /// creates the Cubic Spline Smoother
     ///

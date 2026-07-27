@@ -1,8 +1,4 @@
-use crate::{
-    errors::FourArmError,
-    planner::{Planner, Trajectory},
-    robot::{Joint, Pose},
-};
+use crate::{errors::FourArmError, planner::Trajectory};
 use nalgebra::{DMatrix, DVector};
 
 /// # CHOMP Planner
@@ -158,6 +154,7 @@ impl CHOMP {
         let lu = a_reg.lu();
 
         for _ in 0..self.max_iter {
+            #[allow(clippy::needless_range_loop)]
             for j in 0..dof {
                 // N-vector for joint j across all waypoints
                 let mut x_j = DVector::zeros(n);
@@ -190,10 +187,8 @@ impl CHOMP {
             }
 
             // Re-clamp first and last waypoints to the fixed endpoints
-            for j in 0..dof {
-                traj[0][j] = start_joints[j];
-                traj[n - 1][j] = goal_joints[j];
-            }
+            traj[0][..dof].copy_from_slice(start_joints);
+            traj[n - 1][..dof].copy_from_slice(goal_joints);
         }
 
         Ok(traj)

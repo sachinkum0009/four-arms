@@ -6,7 +6,6 @@ use crate::{
     robot::{Joint, Pose},
 };
 
-
 struct RRTNode {
     config: JointState,
     parent_idx: Option<usize>,

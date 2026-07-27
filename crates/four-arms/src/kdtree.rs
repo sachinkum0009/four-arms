@@ -94,10 +94,10 @@ impl KDNode {
             node.nearest_neighbor(query, depth + 1, best, best_dist);
         }
 
-        if diff.powi(2) < *best_dist {
-            if let Some(node) = second {
-                node.nearest_neighbor(query, depth + 1, best, best_dist);
-            }
+        if diff.powi(2) < *best_dist
+            && let Some(node) = second
+        {
+            node.nearest_neighbor(query, depth + 1, best, best_dist);
         }
     }
 }

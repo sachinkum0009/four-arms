@@ -9,6 +9,12 @@ pub struct Graph {
     edges: HashMap<Node, Vec<(Node, Weight)>>,
 }
 
+impl Default for Graph {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Graph {
     pub fn new() -> Self {
         Self {
@@ -23,6 +29,12 @@ impl Graph {
 
 /// Dijstra
 pub struct Dijstra {}
+
+impl Default for Dijstra {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
 impl Dijstra {
     /// initialize new instance
@@ -47,17 +59,17 @@ impl Dijstra {
                 return Self::reconstruct_path(predecessors, start, goal);
             }
 
-            if let Some(&known_distance) = distances.get(&node) {
-                if distance > known_distance {
-                    continue;
-                }
+            if let Some(&known_distance) = distances.get(&node)
+                && distance > known_distance
+            {
+                continue;
             }
 
             // Explore neighbors
             if let Some(neighbors) = graph.edges.get(&node) {
                 for &(neighbor, weight) in neighbors {
                     let new_distance = distance + weight;
-                    let is_shorter = distances.get(&neighbor).map_or(true, |&d| new_distance < d);
+                    let is_shorter = distances.get(&neighbor).is_none_or(|&d| new_distance < d);
 
                     if is_shorter {
                         distances.insert(neighbor, new_distance);

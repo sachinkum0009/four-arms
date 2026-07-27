@@ -533,7 +533,12 @@ mod tests {
         let target_pose = Pose {
             position: [0.0, 1.0, 0.0],
             // Facing 90 degrees rotated around Z axis
-            rotation: [0.0, 0.0, 0.7071067811865475, 0.7071067811865476],
+            rotation: [
+                0.0,
+                0.0,
+                std::f64::consts::FRAC_1_SQRT_2,
+                std::f64::consts::FRAC_1_SQRT_2,
+            ],
         };
 
         // 2. Supply a seed/initial guess near the solution to avoid local minima

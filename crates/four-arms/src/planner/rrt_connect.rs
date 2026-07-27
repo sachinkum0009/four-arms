@@ -3,7 +3,7 @@ use rand::RngExt;
 use crate::{
     errors::FourArmError,
     planner::{ConfigExt, JointState, Trajectory},
-    robot::{Joint, Pose},
+    robot::Pose,
 };
 
 /// RRT Node
@@ -35,7 +35,12 @@ impl RRTConnect {
     /// Plans the trajectory from start pose
     /// to goal pose
     ///
-    fn plan(&self, _start_pos: &Pose, _goal_pos: &Pose) -> Result<Vec<Joint>, FourArmError> {
+    #[allow(dead_code)]
+    fn plan(
+        &self,
+        _start_pos: &Pose,
+        _goal_pos: &Pose,
+    ) -> Result<Vec<crate::robot::Joint>, FourArmError> {
         Err(FourArmError::TrajPlanError(
             "Failed to plan the trajectory".to_string(),
         ))
@@ -128,11 +133,11 @@ impl RRTConnect {
             };
 
             // --- CONNECT (repeatedly extend the other tree towards the new node) ---
-            if let Some((_, ext_new_config)) = ext_new {
-                if self.connect_trees(connect_tree, &ext_new_config) {
-                    let path = self.reconstruct_path(&start_tree, &goal_tree, swapped);
-                    return Ok(path);
-                }
+            if let Some((_, ext_new_config)) = ext_new
+                && self.connect_trees(connect_tree, &ext_new_config)
+            {
+                let path = self.reconstruct_path(&start_tree, &goal_tree, swapped);
+                return Ok(path);
             }
 
             swapped = !swapped;
@@ -162,7 +167,10 @@ impl RRTConnect {
                 idx
             };
 
-            match tree[nearest_idx].config.step_towards(target, self.step_size) {
+            match tree[nearest_idx]
+                .config
+                .step_towards(target, self.step_size)
+            {
                 Some(next) if !next.is_in_collision() => {
                     let dist_to_target = next.distance(target);
                     tree.push(RRTNode {

@@ -2,12 +2,9 @@ use four_arms::kdtree::{KDNode, KDTree, Point};
 use rand::RngExt;
 use rerun::{
     LineStrips3D, RecordingStreamBuilder,
-    components::{Color, LineStrip3D, Position3D, Radius, Text, Vector3D},
+    components::{Color, Position3D, Radius},
     datatypes::Float32,
-    external::{
-        glam,
-        re_log::{self, error, info, warn},
-    },
+    external::re_log,
 };
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -15,13 +12,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let rec = RecordingStreamBuilder::new("kd_tree")
         .recording_id("run-2")
         .connect_grpc()?;
-
-    // let point1 = Point::new(vec![34.0, 23.0, 10.0]);
-    // let point2 = Point::new(vec![14.0, 13.0, 1.0]);
-    // let point3 = Point::new(vec![4.0, 33.0, 3.0]);
-    // let point4 = Point::new(vec![54.0, 53.0, 4.0]);
-    // let point5 = Point::new(vec![4.0, 3.0, 5.0]);
-    // let point6 = Point::new(vec![1.0, 3.0, 0.0]);
 
     let mut rng = rand::rng();
 
@@ -33,12 +23,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let point = Point::new(vec![x, y, z]);
         kd_tree.insert(point);
     }
-    // kd_tree.insert(point1);
-    // kd_tree.insert(point2);
-    // kd_tree.insert(point3);
-    // kd_tree.insert(point4);
-    // kd_tree.insert(point5);
-    // kd_tree.insert(point6);
 
     let new_point = Point::new(vec![10.0, 5.0, 2.0]);
     let best_point = kd_tree.nearest_neighbor(&new_point);
@@ -67,20 +51,14 @@ fn log_point(rec: &rerun::RecordingStream, point: &Point, label: &str, color: Co
 
     let _ = rec.log(
         format!("world/points/{}", label),
-        &rerun::Points3D::new([position].into_iter())
-            .with_colors([color].into_iter())
-            .with_radii([radius].into_iter()),
+        &rerun::Points3D::new([position])
+            .with_colors([color])
+            .with_radii([radius]),
     );
-
-    // rec.log(
-    //     "world/labels",
-    //     &rerun::Texts3D::new([position].into_iter())
-    //         .with_texts([label.to_string()].into_iter())
-    //         .with_colors([color].into_iter()),
-    // );
 }
 
 // Recursively traverse the KDTree and log nodes/edges
+#[allow(clippy::only_used_in_recursion)]
 fn log_kdtree_node(
     rec: &rerun::RecordingStream,
     node: &KDNode,
@@ -92,21 +70,11 @@ fn log_kdtree_node(
     let label = format!("N{}", *node_id);
     log_point(rec, &node.point, &label, node_color);
 
-    // let current_pos = Position3D::new(
-    //     node.point.coords[0] as f32,
-    //     node.point.coords[1] as f32,
-    //     node.point.coords[2] as f32,
-    // );
-
     let current_pos = [
         node.point.coords[0] as f32,
         node.point.coords[1] as f32,
         node.point.coords[2] as f32,
     ];
-
-    // let points = [
-    //     current_pos,
-    // ]
 
     // Log edge from parent to current node
     if let Some(parent) = parent_pos {

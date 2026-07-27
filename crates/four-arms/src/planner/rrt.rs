@@ -1,7 +1,7 @@
 use crate::{
     errors::FourArmError,
     planner::{ConfigExt, JointState, Trajectory},
-    robot::{Joint, Pose},
+    robot::Pose,
 };
 
 use rand::RngExt;
@@ -42,7 +42,12 @@ impl RRT {
 
     /// Plans the trajectory from start pose
     /// to goal pose
-    fn plan(&self, _start_pos: &Pose, _goal_pos: &Pose) -> Result<Vec<Joint>, FourArmError> {
+    #[allow(dead_code)]
+    fn plan(
+        &self,
+        _start_pos: &Pose,
+        _goal_pos: &Pose,
+    ) -> Result<Vec<crate::robot::Joint>, FourArmError> {
         Err(FourArmError::TrajPlanError(
             "Failed to plan the trajectory".to_string(),
         ))

@@ -1,6 +1,7 @@
 use crate::{errors::FourArmError, planner::Trajectory};
 
 #[derive(Debug)]
+#[allow(dead_code)]
 pub struct TrajOpt {
     num_points: usize,
     max_iter: usize,
@@ -39,23 +40,26 @@ impl TrajOpt {
     ///
     pub fn plan_traj(
         &self,
-        start_joints: &[f64],
-        goal_joints: &[f64],
+        _start_joints: &[f64],
+        _goal_joints: &[f64],
     ) -> Result<Trajectory, FourArmError> {
         Err(FourArmError::FunctionNotImplemented)
     }
 
-    fn obstacle_cost(&self, trajectory: &Trajectory) -> f64 {
+    #[allow(dead_code)]
+    fn obstacle_cost(&self, _trajectory: &Trajectory) -> f64 {
         // TODO: replace the code later
         1.0
     }
 
-    fn smoothness_cost(&self, trajectory: &Trajectory) -> f64 {
+    #[allow(dead_code)]
+    fn smoothness_cost(&self, _trajectory: &Trajectory) -> f64 {
         // TODO: replace the code later
         1.0
     }
 
-    fn path_length_cost(&self, trajectory: &Trajectory) -> f64 {
+    #[allow(dead_code)]
+    fn path_length_cost(&self, _trajectory: &Trajectory) -> f64 {
         // TODO: replace the code later
         1.0
     }
@@ -67,6 +71,7 @@ impl TrajOpt {
     ///
     /// # Returns
     /// f64
+    #[allow(dead_code)]
     fn total_cost(&self, trajectory: &Trajectory) -> f64 {
         self.path_length_cost(trajectory)
             + self.smoothness_cost(trajectory)

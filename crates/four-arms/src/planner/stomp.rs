@@ -1,5 +1,3 @@
-use rand::RngExt;
-
 use crate::{errors::FourArmError, planner::Trajectory};
 use nalgebra::{DMatrix, DVector};
 
@@ -21,7 +19,7 @@ use nalgebra::{DMatrix, DVector};
 /// 3. For each perturbed trajectory  θ + ε̃ₖ  evaluate the total
 ///    cost  U = λ · F_smooth(θ+ε̃ₖ) + w_obs · F_obs(θ+ε̃ₖ).
 /// 4. Compute softmax weights from the costs:
-///       wₖ = exp(−(Cₖ − Cₘᵢₙ) / T) / Σ exp(−(Cₖ − Cₘᵢₙ) / T)
+///    wₖ = exp(−(Cₖ − Cₘᵢₙ) / T) / Σ exp(−(Cₖ − Cₘᵢₙ) / T)
 /// 5. Update  θ ← θ + Σₖ wₖ · ε̃ₖ.
 /// 6. Clamp start/goal waypoints to the fixed endpoints.
 ///
@@ -55,6 +53,7 @@ impl Default for STOMP {
 }
 
 impl STOMP {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         step_size: f64,
         max_iter: usize,
@@ -116,7 +115,9 @@ impl STOMP {
                 .map(|_| (0..dof).map(|_| DVector::zeros(n)).collect())
                 .collect();
 
+            #[allow(clippy::needless_range_loop)]
             for p in 0..k {
+                #[allow(clippy::needless_range_loop)]
                 for j in 0..dof {
                     let mut raw = DVector::zeros(n);
                     for i in 1..n - 1 {
@@ -127,9 +128,7 @@ impl STOMP {
                     raw -= &n2 * (raw.dot(&n2));
 
                     let smoothed = lu.solve(&raw).ok_or_else(|| {
-                        FourArmError::TrajPlanError(
-                            "STOMP linear solve failed".to_string(),
-                        )
+                        FourArmError::TrajPlanError("STOMP linear solve failed".to_string())
                     })?;
                     perturbations[p][j] = smoothed;
                 }
@@ -144,10 +143,8 @@ impl STOMP {
                         perturbed[i][j] += perturbations[p][j][i];
                     }
                 }
-                for j in 0..dof {
-                    perturbed[0][j] = start_joints[j];
-                    perturbed[n - 1][j] = goal_joints[j];
-                }
+                perturbed[0][..dof].copy_from_slice(start_joints);
+                perturbed[n - 1][..dof].copy_from_slice(goal_joints);
                 costs[p] = self.trajectory_cost(&perturbed, &a);
             }
 
@@ -165,10 +162,8 @@ impl STOMP {
                 }
             }
 
-            for j in 0..dof {
-                traj[0][j] = start_joints[j];
-                traj[n - 1][j] = goal_joints[j];
-            }
+            traj[0][..dof].copy_from_slice(start_joints);
+            traj[n - 1][..dof].copy_from_slice(goal_joints);
         }
 
         Ok(traj)
@@ -208,6 +203,7 @@ impl STOMP {
         let mut cost = 0.0;
 
         // Smoothness:  ½ · λ · Σⱼ xⱼᵀ · A · xⱼ
+        #[allow(clippy::needless_range_loop)]
         for j in 0..dof {
             let col: Vec<f64> = (0..n).map(|i| traj[i][j]).collect();
             let x_j = DVector::from_vec(col);
@@ -215,7 +211,9 @@ impl STOMP {
         }
 
         // Obstacle:  w_obs · Σᵢ,ⱼ c(qᵢ,ⱼ)
+        #[allow(clippy::needless_range_loop)]
         for i in 0..n {
+            #[allow(clippy::needless_range_loop)]
             for j in 0..dof {
                 cost += self.obstacle_weight * obstacle_cost(traj[i][j]);
             }
@@ -259,4 +257,4 @@ fn gaussian_sample(rng: &mut impl rand::RngExt, sigma: f64) -> f64 {
     z * sigma
 }
 
-const TAU: f64 = 6.283185307179586;
+const TAU: f64 = std::f64::consts::TAU;

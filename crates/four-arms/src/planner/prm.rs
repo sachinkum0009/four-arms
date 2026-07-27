@@ -6,12 +6,14 @@ use std::f64::consts::PI;
 
 // --- PRM Structures ---
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 pub struct Edge {
     pub from: usize,
     pub to: usize,
 }
 
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 pub struct PRMNode {
     pub config: Vec<f64>,
     pub parent_idx: Option<usize>,
@@ -28,6 +30,7 @@ pub struct PRM {
 }
 
 impl PRM {
+    #[allow(dead_code)]
     pub fn new(
         max_iter: usize,
         step_size: f64,
@@ -44,6 +47,7 @@ impl PRM {
             joint_limits,
         }
     }
+    #[allow(clippy::should_implement_trait)]
     pub fn default() -> Self {
         Self {
             max_iter: 1000,
@@ -194,15 +198,15 @@ impl PRM {
                 if neighbor_idx == current {
                     continue;
                 }
-                if !visited[neighbor_idx] {
-                    if self.is_path_collision_free(
+                if !visited[neighbor_idx]
+                    && self.is_path_collision_free(
                         &self.nodes[current].coords,
                         &self.nodes[neighbor_idx].coords,
-                    ) {
-                        visited[neighbor_idx] = true;
-                        parent[neighbor_idx] = Some(current);
-                        queue.push_back(neighbor_idx);
-                    }
+                    )
+                {
+                    visited[neighbor_idx] = true;
+                    parent[neighbor_idx] = Some(current);
+                    queue.push_back(neighbor_idx);
                 }
             }
         }
