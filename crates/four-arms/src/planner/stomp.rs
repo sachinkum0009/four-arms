@@ -53,6 +53,19 @@ impl Default for STOMP {
 }
 
 impl STOMP {
+    /// # Initiate STOMP planner
+    ///
+    /// ## Arguments
+    /// - step size
+    /// - maximum iterations
+    /// - noise std
+    /// - temperature
+    /// - smooth weight
+    /// - obstacle weight
+    /// - number of waypoints
+    /// - regularization
+    /// - number of perturbations
+    ///
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         step_size: f64,
@@ -78,7 +91,7 @@ impl STOMP {
         }
     }
 
-    /// Plan a trajectory using the STOMP stochastic optimisation algorithm.
+    /// Plan a trajectory using the STOMP algorithm.
     pub fn plan_traj(
         &self,
         start_joints: &[f64],

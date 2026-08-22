@@ -1,6 +1,6 @@
 [package]
 name = "four-arms"
-version = "0.1.1"
+version = "0.1.2"
 edition = "2024"
 description = "Crate for using manipulation forward, inverse kinematics and use planner like RRT, RRT*, STOMP, CHOMP, etc."
 readme = "../../README.md"
