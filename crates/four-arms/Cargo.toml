@@ -17,6 +17,7 @@ thiserror = { version = "2.0.18" }
 rand = "0.10.1"
 rerun = "0.33.0"
 tracing = "0.1.44"
+anyhow = "1.0.104"
 
 [[example]]
 name = "ik_planner"

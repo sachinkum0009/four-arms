@@ -1,4 +1,4 @@
-use crate::{errors::FourArmError, planner::Trajectory};
+use crate::{config::chomp_config::CHOMPConfig, errors::FourArmError, planner::Trajectory};
 use nalgebra::{DMatrix, DVector};
 
 /// # CHOMP Planner
@@ -56,36 +56,21 @@ pub struct CHOMP {
 
 impl Default for CHOMP {
     fn default() -> Self {
-        Self {
-            step_size: 0.1,
-            max_iter: 100,
-            smooth_weight: 1.0,
-            obstacle_weight: 1.0,
-            learning_rate: 0.1,
-            n_waypoints: 50,
-            regularization: 1e-3,
-        }
+        Self::new(&CHOMPConfig::default())
     }
 }
 
 impl CHOMP {
-    pub fn new(
-        step_size: f64,
-        max_iter: usize,
-        smooth_weight: f64,
-        obstacle_weight: f64,
-        learning_rate: f64,
-        n_waypoints: usize,
-        regularization: f64,
-    ) -> Self {
+    /// Initializes CHOMP Planner
+    pub fn new(config: &CHOMPConfig) -> Self {
         Self {
-            step_size,
-            max_iter: max_iter.min(200),
-            smooth_weight,
-            obstacle_weight,
-            learning_rate,
-            n_waypoints,
-            regularization,
+            step_size: config.step_size,
+            max_iter: config.max_iter.min(200),
+            smooth_weight: config.smooth_weight,
+            obstacle_weight: config.obstacle_weight,
+            learning_rate: config.learning_rate,
+            n_waypoints: config.n_waypoints,
+            regularization: config.regularization,
         }
     }
     /// Configure the smoothness cost weight (λ).

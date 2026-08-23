@@ -10,6 +10,8 @@ A rust crate to manipulate Robot Arm
 */
 
 pub mod chain;
+/// Contains configuration for planners
+pub mod config;
 pub mod errors;
 /// Contains the implementation of KDTree
 pub mod kdtree;

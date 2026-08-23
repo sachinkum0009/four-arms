@@ -56,6 +56,7 @@ impl STOMP {
     /// # Initiate STOMP planner
     ///
     /// ## Arguments
+    ///
     /// - step size
     /// - maximum iterations
     /// - noise std
